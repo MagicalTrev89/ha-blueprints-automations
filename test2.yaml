@@ -1,0 +1,218 @@
+blueprint:
+  name: Auto 1 - Charge FoxESS Battery With Car When off peak includes battery protection
+  source_url: https://test2.yaml
+  description: > 
+    This will charge the battery when octopus is off peak  
+     **Octopus off peak** is when the rate is low
+     The Hypervolt charger current will be checked to ensure that charging only
+     takes place when Inteligent dispatching is fully working
+     
+     The Input sensors for this automation have been filtered, there is validation
+     to ensure that you select the correct sensor, look for notification errors
+     
+     Due to validation, if you want to manually trigger this automation you must create
+     a helper button called: input_button.auto1_manual_trigger
+  domain: automation
+  homeassistant:
+    min_version: 2025.10.0
+  input:
+    octopus_off_peak:
+      name: Octopus Energy Off Peak Electricity Sensor
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy
+    octopus_dispatching:
+      name: Hypervolt Intelligent Dispatching
+      selector:
+        entity:
+          filter:
+            integration: octopus_energy
+            domain: binary_sensor
+    hypervolt_charger_current:
+      name: Hypervolt Charger Current
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: hypervolt_charger
+    foxess_modbus_discharge_current:
+      name: FoxESS Inverter Discharge Current
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_max_soc:
+      name: FoxESS Inverter Max SOC
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_work_mode:
+      name: FoxESS Inverter Work Mode
+      selector:
+        entity:
+          filter:
+            domain: select
+            integration: foxess_modbus
+variables:
+  dispatch_entity: !input octopus_dispatching
+  is_intelligent: >
+    {{ 'intelligent dispatching' in dispatch_entity
+       or ('intelligent dispatching' in (state_attr(dispatch_entity, 'friendly_name') | string | lower)) }}
+  off_peak_entity: !input octopus_off_peak
+  is_off_peak_var_correct: >
+    {{ 'off peak electricity' in off_peak_entity
+       or ('off peak electricity' in (state_attr(off_peak_entity, 'friendly_name') | string | lower)) }}
+triggers:
+  - trigger: state
+    entity_id: !input octopus_off_peak
+    from: "off"
+    to: "on"
+  - trigger: numeric_state
+    entity_id: !input hypervolt_charger_current
+    above: 0
+  - trigger: state
+    entity_id: input_button.auto1_manual_trigger
+    
+action:
+  # 1) Validation: show error + stop if not intelligent
+  - choose:
+      - conditions: "{{ not is_intelligent }}"
+        alias: Check Intelligent sensor is valid
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Auto 1 Configuration error: wrong dispatching entity"
+              message: >
+                The selected entity **{{ dispatch_entity }}** does not appear to be the
+                *Intelligent* dispatching sensor (expected the word **'intelligent dispatching'**
+                in the entity id or friendly name).  
+                Please pick the correct Octopus/Hypervolt intelligent dispatching binary sensor and save again.
+          - stop: "Invalid configuration: dispatching entity is not intelligent"
+
+      - conditions: "{{ not is_off_peak_var_correct }}"
+        alias: Check Off Peak Electricity sensor is valid
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Auto 1 Configuration error: wrong off peak entity"
+              message: >
+                The selected entity **{{ off_peak_entity }}** does not appear to be the
+                *Off Peak Electricity* sensor (expected the word **'Off Peak Electricity'**
+                in the entity id or friendly name).  
+                Please pick the correct Off Peak Electricity binary sensor and save again, make sure you havent
+                selected the Export sensor.
+          - stop: "Invalid configuration: Off Peak Electricity is wrong"  
+  # 2) Over night Options
+  - choose:
+      - conditions:
+          - condition: time
+            after: "23:30:00"
+            before: "05:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "on"
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: number.set_value
+            alias: Set Max SOC to 100%
+            target:
+              entity_id: !input foxess_modbus_max_soc
+            metadata: {}
+            data:
+              value: "100"          
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - service: notify.mobile_app_roberts_iphone
+            data:
+              title: "Testing123"
+              message: "Testing a blueprint {{ dispatch_entity }}"
+  # 3) Day time, battery protection here
+  #    The charger will show current before the off peak sensor updates, this is to catch problems
+      - conditions:
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "off"
+          - condition: numeric_state
+            entity_id: !input hypervolt_charger_current
+            above: 1
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+  # ) Day time conditions here
+      - conditions:
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "on"
+          - condition: numeric_state
+            entity_id: !input hypervolt_charger_current
+            above: 1
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+    default: []
+
+mode: single
+max_exceeded: silent
