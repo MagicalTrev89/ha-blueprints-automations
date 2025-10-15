@@ -1,6 +1,6 @@
 blueprint:
   name: Auto 1 - Charge FoxESS Battery With Car When off peak includes battery protection
-  source_url: https://test2.yaml
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation1-charging.yaml
   description: > 
     This will charge the battery when octopus is off peak  
      **Octopus off peak** is when the rate is low
