@@ -78,6 +78,10 @@ triggers:
     above: 0
   - trigger: state
     entity_id: input_button.auto1_manual_trigger
+    # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
+    # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
+  - trigger: time
+    at: "23:31:00"
     
 action:
   # 1) Validation: show error + stop if not intelligent
