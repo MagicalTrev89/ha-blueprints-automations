@@ -36,6 +36,13 @@ blueprint:
           filter:
             domain: select
             integration: foxess_modbus
+    hypervolt_charger_current:
+      name: Hypervolt Charger Current
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: hypervolt_charger
 triggers:
   - trigger: state
     entity_id: !input octopus_free_electricity
