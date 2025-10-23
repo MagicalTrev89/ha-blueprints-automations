@@ -71,7 +71,7 @@ action:
             data:
               value: "40"
           - action: select.select_option
-            alias: Set Work Mode to Charge
+            alias: Set Work Mode to Self Use
             metadata: {}
             data:
               option: Self Use
