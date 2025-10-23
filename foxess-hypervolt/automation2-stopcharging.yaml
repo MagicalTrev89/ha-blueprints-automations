@@ -48,7 +48,7 @@ action:
       - conditions:
           - condition: state
             entity_id: !input octopus_free_electricity
-            "off"
+            state: "off"
           - condition: numeric_state
             entity_id: !input hypervolt_charger_current
             below: 1
