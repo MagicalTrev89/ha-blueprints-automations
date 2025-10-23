@@ -3,7 +3,8 @@ blueprint:
   author: TechGuides
   source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation2-stopcharging.yaml
   description: > 
-    This will stop charging for a bunch of reasons
+    This will stop charging for a bunch of reasons:
+    - If Free Electricity Period ends, Car is not charging and not in a cheap electricity period
   domain: automation
   homeassistant:
     min_version: 2025.8.3
