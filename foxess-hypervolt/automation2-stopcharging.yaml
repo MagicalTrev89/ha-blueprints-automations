@@ -1,0 +1,72 @@
+blueprint:
+  name: Automation 2 - Stop Charging
+  author: TechGuides
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation2-stopcharging.yaml
+  description: > 
+    This will stop charging for a bunch of reasons
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.3
+  input:
+    octopus_free_electricity:
+      name: Octopus Energy Free Electricity Sensor
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy
+    octopus_off_peak:
+      name: Octopus Energy Off Peak Electricity Sensor
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy
+    foxess_modbus_discharge_current:
+      name: FoxESS Inverter Discharge Current
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_work_mode:
+      name: FoxESS Inverter Work Mode
+      selector:
+        entity:
+          filter:
+            domain: select
+            integration: foxess_modbus
+triggers:
+  - trigger: state
+    entity_id: !input octopus_free_electricity
+    from: "on"
+    to: "off"
+
+action:
+  # 1) 
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input octopus_free_electricity
+            "off"
+          - condition: numeric_state
+            entity_id: !input hypervolt_charger_current
+            below: 1
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "off"
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Self Use
+            target:
+              entity_id: !input foxess_modbus_work_mode
