@@ -8,12 +8,12 @@ blueprint:
     * If Free Electricity Period ends, Car is not charging and not in a cheap electricity period
     * TBC, Hypervolt not charging
     * TBC, End of off peak electricity period
-          * from legacy automation 2 - stop charging only if the hypervolt is not
-              * Off Peak = off, time is after 11:30pm but before 05:30am, stop charging
-          * from legacy automation 2a - stop charging if car is connected but not charging
-              * Time = 05:29:55, plugged in, current is < 0, workmode is force charge, stop charge
-          * from legacy automation 4 - stop during day
-              * Off Peak = off OR hypervolt charging = Off, After 05:30 > before 11:30, stop charging
+      * from legacy automation 2 - stop charging only if the hypervolt is not
+        * Off Peak = off, time is after 11:30pm but before 05:30am, stop charging
+      * from legacy automation 2a - stop charging if car is connected but not charging
+        * Time = 05:29:55, plugged in, current is < 0, workmode is force charge, stop charge
+      * from legacy automation 4 - stop during day
+        * Off Peak = off OR hypervolt charging = Off, After 05:30 > before 11:30, stop charging
   domain: automation
   homeassistant:
     min_version: 2025.8.3
