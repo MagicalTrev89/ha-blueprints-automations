@@ -7,7 +7,13 @@ blueprint:
     This will stop charging for a bunch of reasons:
     - If Free Electricity Period ends, Car is not charging and not in a cheap electricity period
     - TBC, Hypervolt not charging
-    - TBC, End of cheap electricity period
+    - TBC, End of off peak electricity period
+    -- from legacy automation 2 - stop charging only if the hypervolt is not
+    --- Off Peak = off, time is after 11:30pm but before 05:30am, stop charging
+    -- from legacy automation 2a - stop charging if car is connected but not charging
+    --- Time = 05:29:55, plugged in, current is < 0, workmode is force charge, stop charge
+    -- from legacy automation 4 - stop during day
+    --- Off Peak = off OR hypervolt charging = Off, After 05:30 > before 11:30, stop charging
   domain: automation
   homeassistant:
     min_version: 2025.8.3
@@ -52,6 +58,12 @@ triggers:
     entity_id: !input octopus_free_electricity
     from: "on"
     to: "off"
+  - trigger: state
+    entity_id: !input octopus_off_peak
+    from: "on"
+    to: "off"
+    enabled: false
+    
 
 action:
   # 1) 
