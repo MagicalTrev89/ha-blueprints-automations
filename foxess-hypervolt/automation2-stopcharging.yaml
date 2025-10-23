@@ -6,6 +6,8 @@ blueprint:
     ## Stop Charging Reasons
     This will stop charging for a bunch of reasons:
     - If Free Electricity Period ends, Car is not charging and not in a cheap electricity period
+    - TBC, Hypervolt not charging
+    - TBC, End of cheap electricity period
   domain: automation
   homeassistant:
     min_version: 2025.8.3
