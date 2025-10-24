@@ -167,6 +167,7 @@ action:
             data:
               title: "Testing123"
               message: "Testing a blueprint {{ dispatch_entity }}"
+        alias: Overnight Off Peak
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
       - conditions:
