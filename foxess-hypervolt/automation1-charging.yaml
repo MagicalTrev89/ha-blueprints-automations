@@ -24,6 +24,13 @@ blueprint:
           filter:
             domain: binary_sensor
             integration: octopus_energy
+    octopus_free_electricity:
+      name: Octopus Free Electricity Sensor
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy           
     octopus_dispatching:
       name: Hypervolt Intelligent Dispatching
       selector:
@@ -82,6 +89,10 @@ triggers:
     # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
   - trigger: time
     at: "23:31:00"
+  - trigger: state
+    entity_id: !input octopus_free_electricity
+    from: "off"
+    to: "on"
     
 action:
   # 1) Validation: show error + stop if not intelligent
@@ -202,6 +213,26 @@ action:
           - condition: numeric_state
             entity_id: !input hypervolt_charger_current
             above: 1
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+      # Octopus Free Electricity Period
+      - conditions:
+          - condition: state
+            entity_id: !input octopus_free_electricity
+            state: "on"
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
