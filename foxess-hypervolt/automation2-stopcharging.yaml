@@ -63,7 +63,10 @@ triggers:
     from: "on"
     to: "off"
     enabled: false
-    
+    # This is needed because the off peak sensor can be delayed, dont want to use the grid accidently due to a slow sensor
+  - trigger: time
+    at: "05:29:55"
+    enabled: false
 
 action:
   # 1) 
@@ -93,3 +96,4 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
+        alias: Free Electricity End
