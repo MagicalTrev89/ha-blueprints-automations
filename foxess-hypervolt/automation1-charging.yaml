@@ -212,7 +212,7 @@ action:
             state: "on"
           - condition: numeric_state
             entity_id: !input hypervolt_charger_current
-            above: 1
+            above: 0
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
