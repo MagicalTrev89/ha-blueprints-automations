@@ -125,7 +125,6 @@ action:
           - stop: "Invalid configuration: Off Peak Electricity is wrong"  
   # 2) Over night Options
   - choose:
-    # alias: Overnight Off Peak
       - conditions:
           - condition: time
             after: "23:30:00"
@@ -171,7 +170,6 @@ action:
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
       - conditions:
-        # alias: Daytime Battery Protection, Car is charging, Off Peak not set
           - condition: time
             after: "05:30:00"
             before: "23:30:00"
@@ -200,7 +198,6 @@ action:
         alias: Daytime Battery Drain Protection
   # ) Day time conditions here
       - conditions:
-        # alias: Daytime charge, off peak is on, car is charging
           - condition: time
             after: "05:30:00"
             before: "23:30:00"
@@ -233,6 +230,7 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
+        alias: Daytime charge, off peak is on, car is charging
       # Octopus Free Electricity Period
       - conditions:
         # alias: Free Electricity Period, Charge Battery
@@ -254,7 +252,6 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-    default: []
-
+        alias: Free Electricity Period, Charge Battery
 mode: single
 max_exceeded: silent
