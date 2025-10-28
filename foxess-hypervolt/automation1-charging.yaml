@@ -188,7 +188,7 @@ action:
             state: "off"
           - condition: numeric_state
             entity_id: !input hypervolt_charger_current
-            above: 1
+            above: 0
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
@@ -197,6 +197,7 @@ action:
             metadata: {}
             data:
               value: "0"
+        alias: Daytime Battery Drain Protection
   # ) Day time conditions here
       - conditions:
         # alias: Daytime charge, off peak is on, car is charging
