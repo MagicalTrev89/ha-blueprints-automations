@@ -65,6 +65,7 @@ triggers:
     enabled: false
     # This is needed because the off peak sensor can be delayed, dont want to use the grid accidently due to a slow sensor
   - trigger: time
+    # This is needed because sometimes the car could be plugged in and not charging, if this happens
     at: "05:29:55"
     enabled: false
 
