@@ -72,7 +72,7 @@ triggers:
     # do not want to risk using cheap electricity because the car wont charge, therefore octopus can take it away.
     at: "05:29:55"
     enabled: true
-  - trigger: state
+  - trigger: numeric_state
     id: EV Power 0
     entity_id: !input hypervolt_ev_power
     below: 0
