@@ -46,8 +46,8 @@ blueprint:
           filter:
             domain: select
             integration: foxess_modbus
-    hypervolt_charger_current:
-      name: Hypervolt Charger Current
+    hypervolt_ev_power:
+      name: Hypervolt EV Power
       selector:
         entity:
           filter:
@@ -55,31 +55,104 @@ blueprint:
             integration: hypervolt_charger
 triggers:
   - trigger: state
+    id: Free Electricity
     entity_id: !input octopus_free_electricity
     from: "on"
     to: "off"
   - trigger: state
+    # Octopus usually is late changing off peak this isn't a great trigger
     entity_id: !input octopus_off_peak
     from: "on"
     to: "off"
     enabled: false
     # This is needed because the off peak sensor can be delayed, dont want to use the grid accidently due to a slow sensor
   - trigger: time
-    # This is needed because sometimes the car could be plugged in and not charging, if this happens
+    id: Time 05:29:55
+    # This is needed because sometimes the car could be plugged in and not charging, but octopus may still have a cheap energy period active
+    # do not want to risk using cheap electricity because the car wont charge, therefore octopus can take it away.
     at: "05:29:55"
-    enabled: false
-
+    enabled: true
+  - trigger: state
+    id: EV Power 0
+    entity_id: !input hypervolt_ev_power
+    below: 0
+    enabled: true
 action:
   # 1) 
   - choose:
       - conditions:
+          - condition: trigger
+            id:
+              - EV Power 0
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - wed
+              - thu
+              - tue
+              - mon
           - condition: state
-            entity_id: !input octopus_free_electricity
-            state: "off"
+            alias: Inverter is in Charging Mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Force Charge
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            metadata: {}
+            data:
+              option: Self Use
+            target:
+              entity_id: !input foxess_modbus_work_mode
+        alias: Car Stops Charging, During Day, Stop Charging
+      - conditions:
+          - condition: trigger
+            id:
+              - Time 05:29:55
           - condition: numeric_state
-            entity_id: !input hypervolt_charger_current
+            entity_id: !input hypervolt_ev_power
             below: 1
           - condition: state
+            alias: Inverter is in Charging Mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Force Charge
+        sequence: 
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            metadata: {}
+            data:
+              option: Self Use
+            target:
+              entity_id: !input foxess_modbus_work_mode
+        alias: When its end of night, car isnt charging, stop charge
+      - conditions:
+          - condition: trigger
+            id:
+              - Free Electricity
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            below: 1
+          - condition: state
+            # This condition is needed as sometimes the free electricity period can end but off peak can be active like at 11:30pm
             entity_id: !input octopus_off_peak
             state: "off"
         sequence:
