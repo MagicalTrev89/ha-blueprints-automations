@@ -38,19 +38,12 @@ blueprint:
           filter:
             integration: octopus_energy
             domain: binary_sensor
-    #hypervolt_charger_current:
-      #name: Hypervolt Charger Current
-      #selector:
-        #entity:
-          #filter:
-            #domain: sensor
-            #integration: hypervolt_charger
-    hypervolt_charging:
-      name: Hypervolt Charging
+    hypervolt_ev_power:
+      name: Hypervolt EV Power
       selector:
         entity:
           filter:
-            domain: switch
+            domain: sensor
             integration: hypervolt_charger
     foxess_modbus_discharge_current:
       name: FoxESS Inverter Discharge Current
@@ -90,16 +83,10 @@ triggers:
   #- trigger: numeric_state
     #entity_id: !input hypervolt_charger_current
     #above: 0
-  - trigger: state
-    alias: Hypervolt is charging for at least 3 seconds
-    entity_id: !input hypervolt_charging
-    to: "on"
-    from: "off"
-    # Putting the delay in here because the charger can flip on when the car is first connected but flips off in a second
-    for:
-      hours: 0
-      minutes: 0
-      seconds: 3
+  - trigger: numeric_state
+    alias: Hypervolt EV charging (detected above 0w)
+    entity_id: !input hypervolt_ev_power
+    above: 0
   - trigger: state
     entity_id: input_button.auto1_manual_trigger
     # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
@@ -201,12 +188,9 @@ action:
           - condition: state
             entity_id: !input octopus_off_peak
             state: "off"
-          #- condition: numeric_state
-            #entity_id: !input hypervolt_charger_current
-            #above: 0
-          - condition: state
-            entity_id: !input hypervolt_charging
-            state: "on"
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            above: 0
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
@@ -232,12 +216,9 @@ action:
           - condition: state
             entity_id: !input octopus_off_peak
             state: "on"
-          #- condition: numeric_state
-            #entity_id: !input hypervolt_charger_current
-            #above: 0
-          - condition: state
-            entity_id: !input hypervolt_charging
-            state: "on"
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            above: 0
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
