@@ -59,12 +59,12 @@ triggers:
     entity_id: !input octopus_free_electricity
     from: "on"
     to: "off"
-  - trigger: state
+  #- trigger: state
     # Octopus usually is late changing off peak this isn't a great trigger
-    entity_id: !input octopus_off_peak
-    from: "on"
-    to: "off"
-    enabled: false
+    #entity_id: !input octopus_off_peak
+    #from: "on"
+    #to: "off"
+    #enabled: false
     # This is needed because the off peak sensor can be delayed, dont want to use the grid accidently due to a slow sensor
   - trigger: time
     id: Time 05:29:55
