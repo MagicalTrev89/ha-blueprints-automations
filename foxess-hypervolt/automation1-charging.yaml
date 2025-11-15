@@ -80,9 +80,10 @@ triggers:
     entity_id: !input octopus_off_peak
     from: "off"
     to: "on"
-  #- trigger: numeric_state
-    #entity_id: !input hypervolt_charger_current
-    #above: 0
+  - trigger: state
+    entity_id: !input octopus_free_electricity
+    from: "off"
+    to: "on"
   - trigger: numeric_state
     alias: Hypervolt EV charging (detected above 0w)
     entity_id: !input hypervolt_ev_power
@@ -93,11 +94,6 @@ triggers:
     # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
   - trigger: time
     at: "23:31:00"
-  - trigger: state
-    entity_id: !input octopus_free_electricity
-    from: "off"
-    to: "on"
-    
 action:
   # 1) Validation: show error + stop if not intelligent
   - choose:
