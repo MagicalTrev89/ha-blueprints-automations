@@ -75,7 +75,7 @@ triggers:
   - trigger: numeric_state
     id: EV Power 0
     entity_id: !input hypervolt_ev_power
-    below: 0
+    below: 1
     enabled: true
 action:
   # 1) 
