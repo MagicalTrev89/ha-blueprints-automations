@@ -85,9 +85,9 @@ triggers:
     from: "off"
     to: "on"
   - trigger: numeric_state
-    alias: Hypervolt EV charging (detected above 0w)
+    alias: Hypervolt EV charging (detected above 1kw)
     entity_id: !input hypervolt_ev_power
-    above: 0
+    above: 1000
   - trigger: state
     entity_id: input_button.auto1_manual_trigger
     # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
@@ -186,7 +186,7 @@ action:
             state: "off"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
-            above: 0
+            above: 1000
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
@@ -214,7 +214,7 @@ action:
             state: "on"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
-            above: 0
+            above: 1000
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
