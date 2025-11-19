@@ -81,6 +81,38 @@ action:
   # 1) 
   - choose:
       - conditions:
+      # This condition triggers usually only if the battery protection has kicked in but the charging never starts, this sometimes happens
+      # for some reason, maybe its that octopus changes its mind
+      # not tested but this condition will likely be good for a charge boost
+          - condition: trigger
+            id:
+              - EV Power 0
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - wed
+              - thu
+              - tue
+              - mon
+          - condition: state
+            alias: Inverter is in Charging Mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Self Use
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+        alias: Car Stops Charging, During Day, Inverter not already charging
+      - conditions:
           - condition: trigger
             id:
               - EV Power 0
