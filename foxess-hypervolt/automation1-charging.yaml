@@ -68,7 +68,7 @@ blueprint:
             integration: foxess_modbus
     notification_device:
       name: Notification Device
-      description: The mobile_app device to send notifications to, i.e notify_mobile_app_my_iphone
+      description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name from your app
       selector:
         text:
 variables:
