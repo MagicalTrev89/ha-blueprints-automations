@@ -70,7 +70,7 @@ blueprint:
       name: Device to send notifications to
       selector:
         device:
-          selector: 
+          filter: 
             integration: mobile_app
 variables:
   dispatch_entity: !input octopus_dispatching
