@@ -184,7 +184,7 @@ action:
             data:
               title: "Battery Charging"
               message: "{{ dispatch_entity }} executed battery is charging"
-          - event: blueprint-notification
+          - event: !input notification_event
             event_data:
               title: Battery Charging
               message: "{{ dispatch_entity }} executed battery is charging"
