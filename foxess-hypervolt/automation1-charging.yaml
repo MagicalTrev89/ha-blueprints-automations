@@ -188,8 +188,8 @@ action:
             target:
               entity_id: !input foxess_modbus_work_mode
           - choose:
-              - conditions:
-                alias: Notify if enabled
+              - alias: Notify if enabled
+                conditions:                
                   - condition: template
                     alias: Are Notifications Enabled? 
                     value_template: >- 
