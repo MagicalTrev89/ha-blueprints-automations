@@ -69,7 +69,7 @@ blueprint:
     notification_device:
       name: Device to send notifications to
       selector:
-        entity: 
+        device: 
           filter:
             domain: mobile_app
 variables:
