@@ -188,8 +188,10 @@ action:
             target:
               entity_id: !input foxess_modbus_work_mode
           - choose:
+            alias: Notify if enabled
               - conditions:
                   - condition: template
+                    alias: Are Notifications Enabled? 
                     value_template: >- 
                       {{ notification_enabled }}
                 sequence:
