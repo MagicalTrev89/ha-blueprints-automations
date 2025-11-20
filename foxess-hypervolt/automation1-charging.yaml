@@ -69,8 +69,9 @@ blueprint:
     notification_device:
       name: Device to send notifications to
       selector:
-        entity:
-          domain: notify
+        device:
+          selector: 
+            integration: mobile_app
 variables:
   dispatch_entity: !input octopus_dispatching
   is_intelligent: >
