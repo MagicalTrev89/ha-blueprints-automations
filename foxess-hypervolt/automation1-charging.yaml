@@ -71,7 +71,7 @@ blueprint:
       selector:
         entity: 
           filter:
-            domain: notification
+            domain: mobile_app
 variables:
   dispatch_entity: !input octopus_dispatching
   is_intelligent: >
