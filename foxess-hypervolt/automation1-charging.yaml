@@ -189,7 +189,8 @@ action:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ !input notification_enabled }}"
+                    value_template: >- 
+                      {{ !input notification_enabled }}
                 sequence:
                   - service: !input notification_device
                     data:
