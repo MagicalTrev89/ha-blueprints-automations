@@ -81,6 +81,9 @@ variables:
   is_off_peak_var_correct: >
     {{ 'off peak electricity' in off_peak_entity
        or ('off peak electricity' in (state_attr(off_peak_entity, 'friendly_name') | string | lower)) }}
+  dev_id: !input notification_device
+  notify_service: >-
+    notify.mobile_app_{{ dev_id | replace(' ','_') | lower }}
 triggers:
   - trigger: state
     entity_id: !input octopus_off_peak
@@ -168,11 +171,12 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-          - device_id: !input notification_device
-            domain: mobile_app
-            type: notify
-            title: "Battery Charging"
-            message: "{{ dispatch_entity }} executed battery is charging"
+          - service: "{{ notify_service }}"
+            data:
+              title: "Battery Charging"
+              message: "{{ dispatch_entity }} executed battery is charging"
+            #title: "Battery Charging"
+            #message: "{{ dispatch_entity }} executed battery is charging"
         alias: Overnight Off Peak
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
