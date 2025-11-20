@@ -53,6 +53,17 @@ blueprint:
           filter:
             domain: sensor
             integration: hypervolt_charger
+    notification_device:
+      name: Notification Device
+      description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name from your app
+      selector:
+        text:
+    notification_event:
+      name: Notification Event
+      description: This sends a notification event to home-assistant which can used by other automations i.e blueprint-notification
+      default: blueprint-notification
+      selector:
+        text:
 triggers:
   - trigger: state
     id: Free Electricity
@@ -104,6 +115,14 @@ action:
             metadata: {}
             data:
               value: "40"
+          - service: !input notification_device
+            data:
+              title: "Battery Stop Charging"
+              message: "{{ dispatch_entity }} - Stopped Battery Protection"
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "{{ dispatch_entity }} - Stopped Battery Protection"
         alias: Car Stops Charging, During Day, Inverter not already charging
       - conditions:
           - condition: trigger
@@ -140,6 +159,14 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
+          - service: !input notification_device
+            data:
+              title: "Battery Stop Charging"
+              message: "{{ dispatch_entity }} - Stopped Battery Charging During Day"
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "{{ dispatch_entity }} - Stopped Battery Charging During Day"
         alias: Car Stops Charging, During Day, Stop Charging
       - conditions:
           - condition: trigger
@@ -168,6 +195,14 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
+          - service: !input notification_device
+            data:
+              title: "Battery Stop Charging"
+              message: "{{ dispatch_entity }} - End of Night, Car Not Charging, Stopped Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "{{ dispatch_entity }} - End of Night, Car Not Charging, Stopped Charging"
         alias: When its end of night, car isnt charging, stop charge
       - conditions:
           - condition: trigger
@@ -195,4 +230,12 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
+          - service: !input notification_device
+            data:
+              title: "Battery Stop Charging"
+              message: "{{ dispatch_entity }} - End of Free Electricity, Stopped Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "{{ dispatch_entity }} - Enf of Free Electricity, Stopped Charging"
         alias: Free Electricity End
