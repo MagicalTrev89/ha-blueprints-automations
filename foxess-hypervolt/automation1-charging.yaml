@@ -168,10 +168,10 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: notify.mobile_app_roberts_iphone
+          - service: !input notification_device
             data:
-              title: "Testing123"
-              message: "Testing a blueprint {{ dispatch_entity }}"
+              title: "Battery Charging"
+              message: "{{ dispatch_entity }} executed battery is charging"
         alias: Overnight Off Peak
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
