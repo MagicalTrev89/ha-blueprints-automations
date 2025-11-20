@@ -92,6 +92,7 @@ variables:
   is_off_peak_var_correct: >
     {{ 'off peak electricity' in off_peak_entity
        or ('off peak electricity' in (state_attr(off_peak_entity, 'friendly_name') | string | lower)) }}
+  notification_enabled: !input notification_enabled
 triggers:
   - trigger: state
     entity_id: !input octopus_off_peak
@@ -190,7 +191,7 @@ action:
               - conditions:
                   - condition: template
                     value_template: >- 
-                      {{ !input notification_enabled }}
+                      {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
                     data:
