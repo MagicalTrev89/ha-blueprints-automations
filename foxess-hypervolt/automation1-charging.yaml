@@ -77,6 +77,12 @@ blueprint:
       default: blueprint-notification
       selector:
         text:
+    notification_enabled:
+      name: Do you want to enable notifications?
+      description: Enable or disable sending notifications
+      default: true
+      selector:
+        boolean:
 variables:
   dispatch_entity: !input octopus_dispatching
   is_intelligent: >
@@ -180,10 +186,15 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Charging"
-              message: "{{ dispatch_entity }} executed battery is charging"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ !input notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "{{ dispatch_entity }} executed battery is charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
