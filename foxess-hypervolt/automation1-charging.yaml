@@ -71,6 +71,12 @@ blueprint:
       description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name from your app
       selector:
         text:
+    notification_event:
+      name: Notification Event
+      description: This sends a notification event to home-assistant which can used by other automations i.e blueprint-notification
+      default: blueprint-notification
+      selector:
+        text:
 variables:
   dispatch_entity: !input octopus_dispatching
   is_intelligent: >
