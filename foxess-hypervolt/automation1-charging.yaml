@@ -145,6 +145,13 @@ action:
           - condition: state
             entity_id: !input octopus_off_peak
             state: "on"
+          - condition: not
+            conditions:
+              - condition: state
+                entity_id: select.rhs_work_mode
+                state:
+                  - Force Charge
+            alias: Not already in Force Charge Mode
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
@@ -171,8 +178,10 @@ action:
             data:
               title: "Battery Charging"
               message: "{{ dispatch_entity }} executed battery is charging"
-            #title: "Battery Charging"
-            #message: "{{ dispatch_entity }} executed battery is charging"
+          - event: blueprint-notification
+            event_data:
+              title: Battery Charging
+              message: "{{ dispatch_entity }} executed battery is charging"
         alias: Overnight Off Peak
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
