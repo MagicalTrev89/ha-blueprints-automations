@@ -233,10 +233,19 @@ action:
             metadata: {}
             data:
               value: "0"
-          - service: !input notification_device
-            data:
-              title: "Battery Charging"
-              message: "{{ dispatch_entity }} Battery Protection, Stopped Battery Discharge"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "{{ dispatch_entity }} Battery Protection, Stopped Battery Discharge"
           - event: !input notification_event
             event_data:
               title: Battery Charging
@@ -276,10 +285,19 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Charging"
-              message: "{{ dispatch_entity }} Daytime Charge, off peak on, car is charging, Battery Charging"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "{{ dispatch_entity }} Daytime Charge, off peak on, car is charging, Battery Charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
@@ -306,10 +324,19 @@ action:
               option: Force Charge
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Charging"
-              message: "{{ dispatch_entity }} Free Electricity, Battery Charging"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "{{ dispatch_entity }} Free Electricity, Battery Charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
