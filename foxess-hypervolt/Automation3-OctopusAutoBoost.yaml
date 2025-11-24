@@ -1,0 +1,57 @@
+blueprint:
+  name: Automation 2 - Stop Charging
+  author: TechGuides
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation3-octopusautoboost.yaml
+  description: | 
+    ## Overview
+    This automation asssumes you have
+    - Octopus Integration
+    - Hypervolt Integration
+    - FoxESS Inverter
+
+    This automation manipulates the octopus inteligent go target amount to maintain sufficient charge in the FoxESS battery.
+
+    The Target amount, is the amount of charge to add to the car set in the octopus app, setting the target amount to 100% provides the highest chance of getting a charging window
+    When the FoxESS battery is charged to a sufficient level, the target charge amount is lowered to 10% which usually results in the car to stop charging.
+    By Stopping the car from charging, we leave charging capacity so that the automation can again charge the battery up when needed.
+
+    This allows the house to run at an overall cheaper rate of electricity, helping prevent the house from running out of battery and pulling from the grid.
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.3
+  input:
+    foxess_modbus_soc:
+      name: FoxESS Inverter State of Charge (SOC)
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: foxess_modbus
+    hypervolt_ev_plugged:
+      name: Hypervolt Car Plugged
+      description: This is the sensor that shows if the car is plugged in, for example: binary_sensor.hypervolt_car_plugged
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: hypervolt_charger
+    octopus_free_electricity:
+      name: Octopus Energy Free Electricity Sensor
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy
+triggers:
+  - trigger: numeric_state
+    id: ev_power
+    entity_id: !input foxess_modbus_soc
+    below: 26
+    enabled: true
+  - trigger: state
+    id: ev_plugged
+    entity_id: !input hypervolt_ev_plugged
+    from: "off"
+    to: "on"
+    enabled: true
+    
