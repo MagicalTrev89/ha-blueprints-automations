@@ -199,11 +199,11 @@ action:
                   - service: !input notification_device
                     data:
                       title: "Battery Charging"
-                      message: "{{ dispatch_entity }} executed battery is charging"
+                      message: "Started Charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
-              message: "{{ dispatch_entity }} executed battery is charging"
+              message: "Started Charging"
         alias: Overnight Off Peak
   # 3) Day time, battery protection here
   #    The charger will show current before the off peak sensor updates, this is to catch problems
@@ -245,11 +245,11 @@ action:
                   - service: !input notification_device
                     data:
                       title: "Battery Charging"
-                      message: "{{ dispatch_entity }} Battery Protection, Stopped Battery Discharge"
+                      message: "Battery Protection activated, Stopped Battery Discharge"
           - event: !input notification_event
             event_data:
               title: Battery Charging
-              message: "{{ dispatch_entity }} Battery Protection, Stopped Battery Discharge"
+              message: "Battery Protection activated, Stopped Battery Discharge"
         alias: Daytime Battery Drain Protection
   # ) Day time conditions here
       - conditions:
@@ -297,11 +297,11 @@ action:
                   - service: !input notification_device
                     data:
                       title: "Battery Charging"
-                      message: "{{ dispatch_entity }} Daytime Charge, off peak on, car is charging, Battery Charging"
+                      message: "Daytime Charge, off peak on, car is charging, Battery Charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
-              message: "{{ dispatch_entity }} Daytime Charge, off peak on, car is charging, Battery Charging"
+              message: "Daytime Charge, off peak on, car is charging, Battery Charging"
         alias: Daytime charge, off peak is on, car is charging
       # Octopus Free Electricity Period
       - conditions:
@@ -336,11 +336,11 @@ action:
                   - service: !input notification_device
                     data:
                       title: "Battery Charging"
-                      message: "{{ dispatch_entity }} Free Electricity, Battery Charging"
+                      message: "Free Electricity, Battery Charging"
           - event: !input notification_event
             event_data:
               title: Battery Charging
-              message: "{{ dispatch_entity }} Free Electricity, Battery Charging"
+              message: "Free Electricity, Battery Charging"
         alias: Free Electricity Period, Charge Battery
 mode: single
 max_exceeded: silent
