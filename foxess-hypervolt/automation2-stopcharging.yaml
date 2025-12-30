@@ -64,6 +64,14 @@ blueprint:
       default: blueprint-notification
       selector:
         text:
+    notification_enabled:
+      name: Do you want to enable notifications?
+      description: Enable or disable sending notifications
+      default: true
+      selector:
+        boolean:
+variables:
+  notification_enabled: !input notification_enabled
 triggers:
   - trigger: state
     id: Free Electricity
@@ -115,14 +123,23 @@ action:
             metadata: {}
             data:
               value: "40"
-          - service: !input notification_device
-            data:
-              title: "Battery Stop Charging"
-              message: "{{ dispatch_entity }} - Stopped Battery Protection"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "Stopped Battery Protection"
           - event: !input notification_event
             event_data:
               title: Battery Stop Charging
-              message: "{{ dispatch_entity }} - Stopped Battery Protection"
+              message: "Stopped Battery Protection"
         alias: Car Stops Charging, During Day, Inverter not already charging
       - conditions:
           - condition: trigger
@@ -159,14 +176,23 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Stop Charging"
-              message: "{{ dispatch_entity }} - Stopped Battery Charging During Day"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "Stopped Battery Charging During Day"            
           - event: !input notification_event
             event_data:
               title: Battery Stop Charging
-              message: "{{ dispatch_entity }} - Stopped Battery Charging During Day"
+              message: "Stopped Battery Charging During Day"
         alias: Car Stops Charging, During Day, Stop Charging
       - conditions:
           - condition: trigger
@@ -195,14 +221,23 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Stop Charging"
-              message: "{{ dispatch_entity }} - End of Night, Car Not Charging, Stopped Charging"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "End of Night, Car Not Charging, Stopped Charging"         
           - event: !input notification_event
             event_data:
               title: Battery Stop Charging
-              message: "{{ dispatch_entity }} - End of Night, Car Not Charging, Stopped Charging"
+              message: "End of Night, Car Not Charging, Stopped Charging"
         alias: When its end of night, car isnt charging, stop charge
       - conditions:
           - condition: trigger
@@ -230,12 +265,21 @@ action:
               option: Self Use
             target:
               entity_id: !input foxess_modbus_work_mode
-          - service: !input notification_device
-            data:
-              title: "Battery Stop Charging"
-              message: "{{ dispatch_entity }} - End of Free Electricity, Stopped Charging"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "End of Free Electricity, Stopped Charging"
           - event: !input notification_event
             event_data:
               title: Battery Stop Charging
-              message: "{{ dispatch_entity }} - Enf of Free Electricity, Stopped Charging"
+              message: "End of Free Electricity, Stopped Charging"
         alias: Free Electricity End
