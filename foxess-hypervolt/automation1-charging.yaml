@@ -161,7 +161,7 @@ action:
           - condition: not
             conditions:
               - condition: state
-                entity_id: select.rhs_work_mode
+                entity_id: !input foxess_modbus_work_mode
                 state:
                   - Force Charge
             alias: Not already in Force Charge Mode
