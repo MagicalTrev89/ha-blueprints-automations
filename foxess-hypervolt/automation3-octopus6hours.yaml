@@ -50,6 +50,10 @@ triggers:
     id: daily_ev_charge_time
     entity_id: !input octopus_charge_time
     above: 1.917
+  - trigger: state
+    id: hypervolt_charging
+    entity_id: !input hypervolt_charging_entity
+    to: on
 conditions:
   - condition: state
     entity_id: !input hypervolt_charging_entity
