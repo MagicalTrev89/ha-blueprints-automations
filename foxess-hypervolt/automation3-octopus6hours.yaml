@@ -58,6 +58,9 @@ conditions:
   - condition: state
     entity_id: !input hypervolt_charging_entity
     state: 'on'
+  - condition: numeric_state
+    entity_id: !input octopus_charge_time
+    above: 1.917
 actions:
   - action: switch.turn_off
     target:
