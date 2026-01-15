@@ -54,7 +54,7 @@ blueprint:
     - condition: state
       entity_id: !input hypervolt_charging_entity
       state: 'on'
-  actions:
+  action:
     - action: switch.turn_off
       target:
         entity_id: !input hypervolt_charging_entity
