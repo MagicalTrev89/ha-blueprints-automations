@@ -53,7 +53,7 @@ triggers:
   - trigger: state
     id: hypervolt_charging
     entity_id: !input hypervolt_charging_entity
-    to: on
+    to: "on"
 conditions:
   - condition: state
     entity_id: !input hypervolt_charging_entity
