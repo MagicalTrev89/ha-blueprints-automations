@@ -1,7 +1,7 @@
 blueprint:
   name: Automation 3 - Octopus 6 Hours Limit
   author: TechGuides
-  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation2-stopcharging.yaml
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation3-octopus6hours.yaml
   description: | 
     ## Stop Charging Reasons
     This automation will stop charging your EV when any of the following conditions are met:
