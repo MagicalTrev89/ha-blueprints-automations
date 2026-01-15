@@ -19,13 +19,13 @@ blueprint:
           filter:
             domain: sensor
     hypervolt_charging_entity:
-      name: Hypervolt Charging Entity
-      description: Hypervolt Entity that shows if the EV is currently charging
+      name: Octopus Hypervolt Charging Entity
+      description: Octopus Intelligent dispatching sensor that shows when charging is active
       selector:
         entity:
           filter:
             domain: switch
-            integration: hypervolt_charger
+            integration: octopus_energy
     notification_device:
       name: Notification Device
       description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name from your app
