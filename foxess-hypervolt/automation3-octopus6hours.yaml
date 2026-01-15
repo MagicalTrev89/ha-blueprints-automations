@@ -69,9 +69,9 @@ actions:
         sequence:
           - service: !input notification_device
             data:
-              title: Battery Stop Charging
-              message: "End of Night, Car Not Charging, Stopped Charging"         
+              title: Car Charging Stopped
+              message: "Charge time has exceeded 5 hours, Charging Stopped"         
   - event: !input notification_event
     event_data:
-      title: Battery Stop Charging
-      message: "End of Night, Car Not Charging, Stopped Charging"
+      title: Car Charging Stopped
+      message: "Charge time has exceeded 5 hours, Charging Stopped"
