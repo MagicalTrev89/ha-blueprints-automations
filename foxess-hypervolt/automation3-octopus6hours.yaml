@@ -43,35 +43,35 @@ blueprint:
       default: true
       selector:
         boolean:
-  variables:
-    notification_enabled: !input notification_enabled
-  triggers:
-    - trigger: numeric_state
-      id: daily_ev_charge_time
-      entity_id: !input octopus_charge_time
-      above: 5.917
-  conditions:
-    - condition: state
+variables:
+  notification_enabled: !input notification_enabled
+triggers:
+  - trigger: numeric_state
+    id: daily_ev_charge_time
+    entity_id: !input octopus_charge_time
+    above: 5.917
+conditions:
+  - condition: state
+    entity_id: !input hypervolt_charging_entity
+    state: 'on'
+actions:
+  - action: switch.turn_off
+    target:
       entity_id: !input hypervolt_charging_entity
-      state: 'on'
-  action:
-    - action: switch.turn_off
-      target:
-        entity_id: !input hypervolt_charging_entity
-    - alias: Notification
-      choose:
-        - alias: Notify if enabled
-          conditions:                
-            - condition: template
-              alias: Are Notifications Enabled? 
-              value_template: >- 
-                {{ notification_enabled }}
-          sequence:
-            - service: !input notification_device
-              data:
-                title: Battery Stop Charging
-                message: "End of Night, Car Not Charging, Stopped Charging"         
-    - event: !input notification_event
-      event_data:
-        title: Battery Stop Charging
-        message: "End of Night, Car Not Charging, Stopped Charging"
+  - alias: Notification
+    choose:
+      - alias: Notify if enabled
+        conditions:                
+          - condition: template
+            alias: Are Notifications Enabled? 
+            value_template: >- 
+              {{ notification_enabled }}
+        sequence:
+          - service: !input notification_device
+            data:
+              title: Battery Stop Charging
+              message: "End of Night, Car Not Charging, Stopped Charging"         
+  - event: !input notification_event
+    event_data:
+      title: Battery Stop Charging
+      message: "End of Night, Car Not Charging, Stopped Charging"
