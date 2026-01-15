@@ -56,6 +56,11 @@ triggers:
     id: daily_ev_charge_time
     entity_id: !input octopus_charge_time
     above: !input time_threshold
+  - trigger: numeric_state
+    enabled: false
+    id: daily_ev_charge_time_reset
+    entity_id: !input octopus_charge_time
+    below: 0.01
   - trigger: state
     id: hypervolt_charging
     entity_id: !input hypervolt_charging_entity
@@ -68,9 +73,25 @@ conditions:
     entity_id: !input octopus_charge_time
     above: !input time_threshold
 actions:
-  - action: switch.turn_off
-    target:
-      entity_id: !input hypervolt_charging_entity
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input octopus_charge_time
+            above: !input time_threshold
+        sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: !input hypervolt_charging_entity
+        alias: Disable Intelligent Dispatching
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input octopus_charge_time
+            below: !input time_threshold
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input hypervolt_charging_entity
+        alias: Disable Intelligent Dispatching
   - alias: Notification
     choose:
       - alias: Notify if enabled
