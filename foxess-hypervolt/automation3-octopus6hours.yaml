@@ -18,14 +18,21 @@ blueprint:
         entity:
           filter:
             domain: sensor
-    hypervolt_charging_entity:
-      name: Octopus Hypervolt Charging Entity
+    octopus_charging_entity:
+      name: Octopus Charging Entity
       description: Octopus Intelligent dispatching sensor that shows when charging is active
       selector:
         entity:
           filter:
             domain: switch
             integration: octopus_energy
+    ev_charging_entity:
+      name: EV Charging Entity
+      description: The entity that shows when the EV is charging, used to trigger the automation to check
+      selector:
+        entity:
+          filter:
+            domain: switch
     notification_device:
       name: Notification Device
       description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name from your app
@@ -60,38 +67,35 @@ triggers:
     enabled: false
     id: daily_ev_charge_time_reset
     entity_id: !input octopus_charge_time
-    below: 0.01
+    below: !input time_threshold
   - trigger: state
-    id: hypervolt_charging
-    entity_id: !input hypervolt_charging_entity
+    id: EV_charging
+    entity_id: !input ev_charging_entity
     to: "on"
 conditions:
-  - condition: state
-    entity_id: !input hypervolt_charging_entity
-    state: 'on'
-  - condition: numeric_state
-    entity_id: !input octopus_charge_time
-    above: !input time_threshold
+  # No conditions, as they are handled in the actions
 actions:
   - choose:
-      - conditions:
+      - alias: Disable Intelligent Dispatching
+        conditions:
           - condition: numeric_state
             entity_id: !input octopus_charge_time
             above: !input time_threshold
         sequence:
           - action: switch.turn_off
             target:
-              entity_id: !input hypervolt_charging_entity
-        alias: Disable Intelligent Dispatching
-      - conditions:
+              entity_id: !input octopus_charging_entity
+        
+      - alias: Enable Intelligent Dispatching
+        conditions:
           - condition: numeric_state
             entity_id: !input octopus_charge_time
             below: !input time_threshold
         sequence:
           - action: switch.turn_on
             target:
-              entity_id: !input hypervolt_charging_entity
-        alias: Disable Intelligent Dispatching
+              entity_id: !input octopus_charging_entity
+        
   - alias: Notification
     choose:
       - alias: Notify if enabled
