@@ -64,7 +64,6 @@ triggers:
     entity_id: !input octopus_charge_time
     above: !input time_threshold
   - trigger: numeric_state
-    enabled: false
     id: daily_ev_charge_time_reset
     entity_id: !input octopus_charge_time
     below: !input time_threshold
