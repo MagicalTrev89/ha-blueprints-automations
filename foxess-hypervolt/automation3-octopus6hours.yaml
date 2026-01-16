@@ -84,7 +84,23 @@ actions:
           - action: switch.turn_off
             target:
               entity_id: !input octopus_charging_entity
-        
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Octopus Intelligent
+                      message: "Disabled: Charge time has exceeded threshold"         
+          - event: !input notification_event
+            event_data:
+              title: Octopus Intelligent
+              message: "Disabled: Charge time has exceeded threshold"  
       - alias: Enable Intelligent Dispatching
         conditions:
           - condition: numeric_state
@@ -94,21 +110,20 @@ actions:
           - action: switch.turn_on
             target:
               entity_id: !input octopus_charging_entity
-        
-  - alias: Notification
-    choose:
-      - alias: Notify if enabled
-        conditions:                
-          - condition: template
-            alias: Are Notifications Enabled? 
-            value_template: >- 
-              {{ notification_enabled }}
-        sequence:
-          - service: !input notification_device
-            data:
-              title: Car Charging Stopped
-              message: "Charge time has exceeded 5 hours, Charging Stopped"         
-  - event: !input notification_event
-    event_data:
-      title: Car Charging Stopped
-      message: "Charge time has exceeded 5 hours, Charging Stopped"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Octopus Intelligent
+                      message: "Enabled: Charge time is below threshold"         
+          - event: !input notification_event
+            event_data:
+              title: Octopus Intelligent
+              message: "Enabled: Charge time is below threshold"
