@@ -71,6 +71,7 @@ triggers:
     id: EV_charging
     entity_id: !input ev_charging_entity
     to: "on"
+    enabled: false
 conditions:
   # No conditions, as they are handled in the actions
 actions:
