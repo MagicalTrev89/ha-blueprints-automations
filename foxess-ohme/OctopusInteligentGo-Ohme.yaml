@@ -1,0 +1,262 @@
+blueprint:
+  name: Octopus Inteligent Go - Ohme
+  author: PowerLockr.co.uk
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-ohme/OctopusInteligentGo-Ohme.yaml
+  description: > 
+    # Overview
+    When using Octopus Energy with an Ohme charger, this automation will prevent FoxESS battery discharge into the car while
+    charging.
+    Octopus provide intelligent charging windows during the day, this blueprint will charge the FoxESS battery during these
+    windows to ensure that the car is charged using the cheapest electricity.
+    Octopus also provide off peak electricity at night, this blueprint will also charge the battery during these times.
+
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.3
+  input:
+    octopus_off_peak:
+      name: Octopus Energy Off Peak Electricity Sensor
+      description: Sensor that shows when off peak electricity is available, this is both over night or during the day when using intelligent dispatching.
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy      
+    octopus_dispatching:
+      name: Octopus Intelligent Dispatching Sensor
+      selector:
+        entity:
+          filter:
+            integration: octopus_energy
+            domain: binary_sensor
+    foxess_modbus_discharge_current:
+      name: FoxESS Inverter Discharge Current
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_max_soc:
+      name: FoxESS Inverter Max SOC
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_work_mode:
+      name: FoxESS Inverter Work Mode
+      selector:
+        entity:
+          filter:
+            domain: select
+            integration: foxess_modbus
+    ohme_ev_power:
+      name: Ohme EV Power
+      description: Sensor to monitor the power being used by the Ohme EV charger
+      default: sensor.ohme_home_go_power
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: ohme
+
+    notification_device:
+      name: Notification Device
+      default: notify.notify
+      description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name, or use the default notify.notify to send to all devices in Home Assistant.
+      selector:
+        text:
+    notification_event:
+      name: Notification Event
+      description: This sends a notification event to home-assistant which can used by other automations i.e blueprint-notification
+      default: blueprint-notification
+      selector:
+        text:
+    notification_enabled:
+      name: Do you want to enable notifications?
+      description: Enable or disable sending notifications
+      default: true
+      selector:
+        boolean:
+variables:
+  dispatch_entity: !input octopus_dispatching
+  off_peak_entity: !input octopus_off_peak
+  notification_enabled: !input notification_enabled
+triggers:
+  - trigger: state
+    entity_id: !input octopus_off_peak
+    from: "off"
+    to: "on"
+  - trigger: numeric_state
+    alias: Ohme EV charging (detected above 1kw)
+    entity_id: !input ohme_ev_power
+    above: 1
+    # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
+    # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
+  - trigger: time
+    at: "23:31:00"
+action:
+  # 1) Over night Options
+  - choose:
+      - conditions:
+          - condition: time
+            after: "23:30:00"
+            before: "05:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "on"
+          - condition: not
+            conditions:
+              - condition: state
+                entity_id: !input foxess_modbus_work_mode
+                state:
+                  - Force Charge
+            alias: Not already in Force Charge Mode
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: number.set_value
+            alias: Set Max SOC to 100%
+            target:
+              entity_id: !input foxess_modbus_max_soc
+            metadata: {}
+            data:
+              value: "100"          
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "Started Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Started Charging"
+        alias: START CHARGE - Overnight Off Peak
+  # 2) Day time, battery protection here
+  #    The charger will show current before the off peak sensor updates, this is to catch problems
+      - conditions:
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "off"
+          - condition: numeric_state
+            entity_id: !input ohme_ev_power
+            above: 0
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging"
+        alias: HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging
+  # 3) Day time conditions here
+      - conditions:
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input octopus_off_peak
+            state: "on"
+          - condition: numeric_state
+            entity_id: !input ohme_ev_power
+            above: 0
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "Daytime Charge, off peak on, car is charging, Battery Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Daytime Charge, off peak on, car is charging, Battery Charging"
+        alias: START CHARGE: Daytime charge, off peak is on, car is charging
+mode: single
+max_exceeded: silent
