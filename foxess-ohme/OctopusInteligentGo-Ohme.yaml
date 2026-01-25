@@ -4,6 +4,7 @@ blueprint:
   source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-ohme/OctopusInteligentGo-Ohme.yaml
   description: > 
     # Overview
+    
     When using Octopus Energy with an Ohme charger, this automation will prevent FoxESS battery discharge into the car while
     charging.
     Octopus provide intelligent charging windows during the day, this blueprint will charge the FoxESS battery during these
@@ -257,6 +258,6 @@ action:
             event_data:
               title: Battery Charging
               message: "Daytime Charge, off peak on, car is charging, Battery Charging"
-        alias: START CHARGE: Daytime charge, off peak is on, car is charging
+        alias: START CHARGE - Daytime charge, off peak is on, car is charging
 mode: single
 max_exceeded: silent
