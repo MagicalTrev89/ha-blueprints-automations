@@ -205,7 +205,7 @@ action:
             event_data:
               title: Battery Charging
               message: "HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging"
-        alias: HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging
+        alias: HOLD CHARGE - Daytime Battery Drain Protection, off peak is off, car is charging
   # 3) Day time conditions here
       - conditions:
           - condition: time
