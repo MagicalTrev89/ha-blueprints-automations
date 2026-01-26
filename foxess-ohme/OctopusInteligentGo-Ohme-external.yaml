@@ -1,7 +1,7 @@
 blueprint:
   name: Octopus Inteligent Go - Ohme
   author: PowerLockr.co.uk
-  source_url: https://cloud.thebowrings.co.uk/index.php/s/YCLQmWCGeMjoRPM/download/OctopusInteligentGo-Ohme.yaml
+  source_url: https://cloud.thebowrings.co.uk/index.php/s/4n47YJbED6zEPBk/download/OctopusInteligentGo-Ohme-external.yaml
   description: > 
     # Overview
     
@@ -79,6 +79,12 @@ blueprint:
       default: true
       selector:
         boolean:
+    optimistic_enabled:
+      name: Do you want to enable optimistic charging
+      description: The HA Octopus integration provides sensors for cheap and intelligent dispatching, but these sensors can sometimes lag behind or not update correctly at all.Enabling optimistic charging will ignore the Octopus sensors and follow the EV charger instead, this means that if you force charge your EV outside of a cheap period the house battery will also charge at this more expensive rate. This is unfortuently the best and sometmes only option for Ohme chargers to have optimistic charging enabled.
+      default: true
+      selector:
+        boolean:
 variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
@@ -138,9 +144,14 @@ action:
               - wed
               - tue
               - mon
-          - condition: state
-            entity_id: !input octopus_off_peak
-            state: "on"
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "on"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "on"
           - condition: not
             conditions:
               - condition: state
@@ -207,9 +218,14 @@ action:
               - wed
               - tue
               - mon
-          - condition: state
-            entity_id: !input octopus_off_peak
-            state: "off"
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "off"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "off"
           - condition: numeric_state
             entity_id: !input ohme_ev_power
             above: 0
@@ -257,9 +273,14 @@ action:
               - wed
               - tue
               - mon
-          - condition: state
-            entity_id: !input octopus_off_peak
-            state: "on"
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "on"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "on"
           - condition: numeric_state
             entity_id: !input ohme_ev_power
             above: 0
