@@ -1,0 +1,475 @@
+blueprint:
+  name: Octopus Inteligent Go - Hypervolt
+  author: PowerLockr.co.uk
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/OctopusInteligentGo-Hypervolt.yaml
+  description: > 
+    # Overview
+    
+    When using Octopus Energy with an Hypervolt charger, this automation will prevent FoxESS battery discharge into the car while
+    charging.
+    Octopus provide intelligent charging windows during the day, this blueprint will charge the FoxESS battery during these
+    windows to ensure that the car is charged using the cheapest electricity.
+    Octopus also provide off peak electricity at night, this blueprint will also charge the battery during these times.
+
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.3
+  input:
+    octopus_off_peak:
+      name: Octopus Energy Off Peak Electricity Sensor
+      description: Sensor that shows when off peak electricity is available, this is both over night or during the day when using intelligent dispatching.
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: octopus_energy      
+    octopus_dispatching:
+      name: Octopus Intelligent Dispatching Sensor
+      selector:
+        entity:
+          filter:
+            integration: octopus_energy
+            domain: binary_sensor
+    foxess_modbus_discharge_current:
+      name: FoxESS Inverter Discharge Current
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_max_soc:
+      name: FoxESS Inverter Max SOC
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_modbus
+    foxess_modbus_work_mode:
+      name: FoxESS Inverter Work Mode
+      selector:
+        entity:
+          filter:
+            domain: select
+            integration: foxess_modbus
+    hypervolt_ev_power:
+      name: Hypervolt EV Power
+      description: Sensor to monitor the power being used by the Hypervolt EV charger
+      default: sensor.hypervolt_ev_power
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: hypervolt_charger
+
+    notification_device:
+      name: Notification Device
+      default: notify.notify
+      description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name, or use the default notify.notify to send to all devices in Home Assistant.
+      selector:
+        text:
+    notification_event:
+      name: Notification Event
+      description: This sends a notification event to home-assistant which can used by other automations i.e blueprint-notification
+      default: blueprint-notification
+      selector:
+        text:
+    notification_enabled:
+      name: Do you want to enable notifications?
+      description: Enable or disable sending notifications
+      default: true
+      selector:
+        boolean:
+    optimistic_enabled:
+      name: Do you want to enable optimistic charging
+      description: The HA Octopus integration provides sensors for cheap and intelligent dispatching, but these sensors can sometimes lag behind or not update correctly at all.Enabling optimistic charging will ignore the Octopus sensors and follow the EV charger instead, this means that if you force charge your EV outside of a cheap period the house battery will also charge at this more expensive rate. This is unfortuently the best and sometmes only option for Hypervolt chargers to have optimistic charging enabled.
+      default: false
+      selector:
+        boolean:
+variables:
+  dispatch_entity: !input octopus_dispatching
+  off_peak_entity: !input octopus_off_peak
+  notification_enabled: !input notification_enabled
+triggers:
+  # These are the Charging Triggers
+  - trigger: state
+    id: octopus_off_peak_on
+    entity_id: !input octopus_off_peak
+    from: "off"
+    to: "on"
+  - trigger: numeric_state
+    id : hypervolt_ev_charging_above_1
+    alias: Hypervolt EV charging (detected above 1kw)
+    entity_id: !input hypervolt_ev_power
+    above: 1
+    # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
+    # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
+  - trigger: time
+    id: Time 23:31:00
+    at: "23:31:00"
+  # end of charging triggers
+
+  # Start of stop charging triggers
+  - trigger: time
+    id: Time 05:29:55
+    # This is needed because sometimes the car could be plugged in and not charging, but octopus may still have a cheap energy period active
+    # do not want to risk using cheap electricity because the car wont charge, therefore octopus can take it away.
+    at: "05:29:55"
+    enabled: true
+  - trigger: numeric_state
+    id: EV Power 0
+    entity_id: !input hypervolt_ev_power
+    below: 1
+    enabled: true
+  # end of stop charging triggers
+
+action:
+  # Start Charging Actions
+  # 1) Over night Options
+  - alias: Start Charging Actions
+    choose:
+      - conditions:
+          - condition: trigger
+            id: 
+              - octopus_off_peak_on
+              - hypervolt_ev_charging_above_1
+              - Time 23:31:00
+          - condition: time
+            after: "23:30:00"
+            before: "05:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "on"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "on"
+          - condition: not
+            conditions:
+              - condition: state
+                entity_id: !input foxess_modbus_work_mode
+                state:
+                  - Force Charge
+            alias: Not already in Force Charge Mode
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: number.set_value
+            alias: Set Max SOC to 100%
+            target:
+              entity_id: !input foxess_modbus_max_soc
+            metadata: {}
+            data:
+              value: "100"          
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "Started Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Started Charging"
+        alias: START CHARGE - Overnight Off Peak
+      # 2) Day time, battery protection here
+      #    The charger will show current before the off peak sensor updates, this is to catch problems
+      - conditions:
+          - condition: trigger
+            id: 
+              - octopus_off_peak_on
+              - hypervolt_ev_charging_above_1
+              - Time 23:31:00
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "off"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "off"
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            above: 0
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "HOLD CHARGE: Daytime Battery Drain Protection, off peak is off, car is charging"
+        alias: HOLD CHARGE - Daytime Battery Drain Protection, off peak is off, car is charging
+      # 3) Day time conditions here
+      - conditions:
+          - condition: trigger
+            id: 
+              - octopus_off_peak_on
+              - hypervolt_ev_charging_above_1
+              - Time 23:31:00
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - thu
+              - wed
+              - tue
+              - mon
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "on"
+              - condition: state
+                entity_id: !input optimistic_enabled
+                state: "on"
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            above: 0
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 0
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "0"
+          - action: select.select_option
+            alias: Set Work Mode to Charge
+            metadata: {}
+            data:
+              option: Force Charge
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "Daytime Charge, off peak on, car is charging, Battery Charging"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Daytime Charge, off peak on, car is charging, Battery Charging"
+        alias: START CHARGE - Daytime charge, off peak is on, car is charging
+  # End Charging Actions
+
+  # Stop Charging Actions
+  - alias: Stop Charging Actions
+    choose:
+      - conditions:
+      # This condition triggers usually only if the battery protection has kicked in but the charging never starts, this sometimes happens
+      # for some reason, maybe its that octopus changes its mind
+      # not tested but this condition will likely be good for a charge boost
+          - condition: trigger
+            id:
+              - EV Power 0
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - wed
+              - thu
+              - tue
+              - mon
+          - condition: state
+            alias: Inverter is in Self use mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Self Use
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "Stopped Battery Protection"
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "Stopped Battery Protection"
+        alias: Car Stops Charging, During Day, Inverter not already charging
+      - conditions:
+          - condition: trigger
+            id:
+              - EV Power 0
+          - condition: time
+            after: "05:30:00"
+            before: "23:30:00"
+            weekday:
+              - sun
+              - sat
+              - fri
+              - wed
+              - thu
+              - tue
+              - mon
+          - condition: state
+            alias: Inverter is in Charging Mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Force Charge
+        sequence:
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            metadata: {}
+            data:
+              option: Self Use
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "Stopped Battery Charging During Day"            
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "Stopped Battery Charging During Day"
+        alias: Car Stops Charging, During Day, Stop Charging
+      - conditions:
+          - condition: trigger
+            id:
+              - Time 05:29:55
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            below: 1
+          - condition: state
+            alias: Inverter is in Charging Mode
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Force Charge
+        sequence: 
+          - action: number.set_value
+            alias: Set Discharge Current to 40
+            target:
+              entity_id: !input foxess_modbus_discharge_current
+            metadata: {}
+            data:
+              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            metadata: {}
+            data:
+              option: Self Use
+            target:
+              entity_id: !input foxess_modbus_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Stop Charging
+                      message: "End of Night, Car Not Charging, Stopped Charging"         
+          - event: !input notification_event
+            event_data:
+              title: Battery Stop Charging
+              message: "End of Night, Car Not Charging, Stopped Charging"
+        alias: When its end of night, car isnt charging, stop charge
+
+  # End Stop Charging Actions
+mode: single
+max_exceeded: silent
