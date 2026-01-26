@@ -89,6 +89,7 @@ variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
   notification_enabled: !input notification_enabled
+  optimistic_enabled: !input optimistic_enabled
 triggers:
   # These are the Charging Triggers
   - trigger: state
@@ -149,9 +150,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "on"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "on"
+              - condition: template
+                value_template: "{{ optimistic_enabled }}"
           - condition: not
             conditions:
               - condition: state
@@ -223,9 +223,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "off"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "off"
+              - condition: template
+                value_template: "{{not optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input ohme_ev_power
             above: 0
@@ -278,9 +277,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "on"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "on"
+              - condition: template
+                value_template: "{{ optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input ohme_ev_power
             above: 0
