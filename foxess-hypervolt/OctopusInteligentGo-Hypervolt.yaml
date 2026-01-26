@@ -150,9 +150,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "on"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "on"
+              - condition: template
+                value_template: "{{ optimistic_enabled }}"
           - condition: not
             conditions:
               - condition: state
@@ -224,9 +223,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "off"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "off"
+              - condition: template
+                value_template: "{{not optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 0
@@ -279,9 +277,8 @@ action:
               - condition: state
                 entity_id: !input octopus_off_peak
                 state: "on"
-              - condition: state
-                entity_id: !input optimistic_enabled
-                state: "on"
+              - condition: template
+                value_template: "{{ optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 0
