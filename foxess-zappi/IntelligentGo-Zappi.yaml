@@ -53,7 +53,7 @@ blueprint:
             integration: foxess_modbus
     zappi_ev_power:
       name: Zappi EV Power
-      description: Sensor to monitor the power being used by the Zappi EV charger
+      description: Sensor to monitor the power being used by the Zappi EV charger, We are looking here for a sensor with "internal load ct1" as the name or alternatively just the sensor that shows the realtime power usage of the EV charger
       selector:
         entity:
           filter:
