@@ -80,8 +80,8 @@ blueprint:
         boolean:
     optimistic_enabled:
       name: Do you want to enable optimistic charging
-      description: The HA Octopus integration provides sensors for cheap and intelligent dispatching, but these sensors can sometimes lag behind or not update correctly at all.Enabling optimistic charging will ignore the Octopus sensors and follow the EV charger instead, this means that if you force charge your EV outside of a cheap period the house battery will also charge at this more expensive rate. This is unfortuently the best and sometmes only option for Zappi chargers to have optimistic charging enabled.
-      default: true
+      description: The HA Octopus integration provides sensors for cheap and intelligent dispatching, but these sensors can sometimes lag behind or not update correctly at all. Enabling optimistic charging will ignore the Octopus sensors and follow the EV charger instead, this means that if you force charge your EV outside of a cheap period the house battery will also charge at this more expensive rate. For Zappi it is recommended to disable this option.
+      default: false
       selector:
         boolean:
 variables:
