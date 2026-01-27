@@ -1,7 +1,7 @@
 blueprint:
   name: Octopus Intelligent Go - Zappi
   author: PowerLockr.co.uk
-  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-zappi/OctopusIntelligentGo-Zappi.yaml
+  source_url: https://cloud.thebowrings.co.uk/index.php/s/E3HA5sAKs99tNmX/download/OctopusIntelligentGo-Zappi-external.yaml
   description: > 
     # Overview
     
