@@ -218,7 +218,7 @@ action:
               - wed
               - tue
               - mon
-          - condition: or
+          - condition: and
             conditions:
               - condition: state
                 entity_id: !input octopus_off_peak
