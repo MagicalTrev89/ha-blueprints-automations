@@ -180,13 +180,13 @@ action:
           - if:
               - condition: template
                 value_template: "{{ overnight_force_charge_rate < 40 }}"
-                then:
-                  - action: number.set_value
-                    metadata: {}
-                    target:
-                      entity_id: !input foxess_modbus_charge_current
-                    data:
-                      value: "{{ overnight_force_charge_rate }}"
+            then:
+              - action: number.set_value
+                metadata: {}
+                target:
+                  entity_id: !input foxess_modbus_charge_current
+                data:
+                  value: "{{ overnight_force_charge_rate }}"
           - action: number.set_value
             alias: Set Discharge Current to 0
             target:
