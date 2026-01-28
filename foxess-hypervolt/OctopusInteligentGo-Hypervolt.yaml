@@ -85,6 +85,16 @@ blueprint:
       default: false
       selector:
         boolean:
+    overnight_force_charge_rate:
+      name: Optional, Overnight charge rate limit (kWH)
+      description: For over night, Set the maxmimum Charge rate when the car is charging, use this to throttle the inverter and charge slower. If you leave as the default 0, no throttling will take place.
+      default: 0
+      selector:
+        number:
+        max: 6
+        min: 0
+        step: 1
+					
 variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
