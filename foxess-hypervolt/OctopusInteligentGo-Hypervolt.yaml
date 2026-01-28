@@ -93,8 +93,7 @@ blueprint:
         number:
         max: 6
         min: 0
-        step: 1
-					
+        step: 1	
 variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
