@@ -281,6 +281,13 @@ action:
           - condition: numeric_state
             entity_id: !input zappi_ev_power
             above: 0
+          - condition: state #Prevents execution when already charging due to multiple triggers
+            entity_id: !input foxess_modbus_work_mode
+            state:
+              - Self Use
+              - Feed-in First
+              - Force Discharge
+              - Back-up 
         sequence:
           - action: number.set_value
             alias: Set Discharge Current to 0
