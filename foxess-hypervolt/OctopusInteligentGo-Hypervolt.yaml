@@ -177,9 +177,10 @@ action:
                   - Force Charge
             alias: Not already in Force Charge Mode
         sequence:
-          - if:
+          - alias: If needed restrict charge current
+            if:
               - condition: template
-                value_template: "{{ overnight_force_charge_rate < 40 }}"
+                value_template: "{{ !input foxess_modbus_charge_current != overnight_force_charge_rate }}"
             then:
               - action: number.set_value
                 metadata: {}
