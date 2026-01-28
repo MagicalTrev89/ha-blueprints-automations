@@ -107,6 +107,7 @@ variables:
   notification_enabled: !input notification_enabled
   optimistic_enabled: !input optimistic_enabled
   overnight_force_charge_rate: !input overnight_force_charge_rate
+  foxess_modbus_charge_current: !input foxess_modbus_charge_current
 triggers:
   # These are the Charging Triggers
   - trigger: state
@@ -180,7 +181,7 @@ action:
           - alias: If needed restrict charge current
             if:
               - condition: template
-                value_template: "{{ !input foxess_modbus_charge_current != overnight_force_charge_rate }}"
+                value_template: "{{ foxess_modbus_charge_current != overnight_force_charge_rate }}"
             then:
               - action: number.set_value
                 metadata: {}
