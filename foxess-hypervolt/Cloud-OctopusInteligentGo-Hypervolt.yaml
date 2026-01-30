@@ -48,11 +48,53 @@ blueprint:
 #            domain: number
 #            integration: foxess_modbus
     foxess_cloud_work_mode:
-      name: FoxESS Inverter Work Mode
+      name: FoxESS Cloud Inverter Work Mode
       selector:
         entity:
           filter:
             domain: select
+            integration: foxess_cloud
+    foxess_cloud_scheduler_enable:
+      name: FoxESS Cloud Inverter Scheduler Enable
+      selector:
+        entity:
+          filter:
+            domain: switch
+            integration: foxess_cloud
+    foxess_cloud_scheduler_start_time:
+      name: FoxESS Cloud Inverter Scheduler Start Time
+      selector:
+        entity:
+          filter:
+            domain: time
+            integration: foxess_cloud
+    foxess_cloud_scheduler_end_time:
+      name: FoxESS Cloud Inverter Scheduler End Time
+      selector:
+        entity:
+          filter:
+            domain: time
+            integration: foxess_cloud
+    foxess_cloud_scheduler_power:
+      name: FoxESS Cloud Inverter Scheduler Power
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: foxess_cloud
+    foxess_cloud_scheduler_work_mode: #ForceCharge is the typical option
+      name: FoxESS Cloud Inverter Scheduler Work Mode
+      selector:
+        entity:
+          filter:
+            domain: select
+            integration: foxess_cloud
+    foxess_cloud_scheduler_set:
+      name: FoxESS Cloud Inverter Scheduler Set
+      selector:
+        entity:
+          filter:
+            domain: button
             integration: foxess_cloud
     hypervolt_ev_power:
       name: Hypervolt EV Power
@@ -158,32 +200,48 @@ action:
           - condition: not
             conditions:
               - condition: state
-                entity_id: !input foxess_cloud_work_mode
-                state:
-                  - Force Charge
+                entity_id: !input foxess_cloud_scheduler_enable
+                state: "on"
             alias: Not already in Force Charge Mode
         sequence:
-#          - action: number.set_value
-#            alias: Set Discharge Current to 0
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "0"
-#          - action: number.set_value
-#            alias: Set Max SOC to 100%
-#            target:
-#              entity_id: !input foxess_cloud_max_soc
-#            metadata: {}
-#            data:
-#              value: "100"          
-          - action: select.select_option
-            alias: Set Work Mode to Charge
-            metadata: {}
+          - alias: Set Scheduler
+            action: foxess_cloud.set_schedule
             data:
-              option: Force Charge
-            target:
-              entity_id: !input foxess_cloud_work_mode
+              device_sn: 60JH602044GN150
+              groups:
+                #Night time to midnight charging 
+                - enable: 1
+                  startHour: 23
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # Midnight to early morning
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # (Daytime) Early morning to night time
+                - enable: 0
+                  startHour: 5
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 1000
+                  maxSoc: 100
           - alias: Notification
             choose:
               - alias: Notify if enabled
@@ -227,18 +285,17 @@ action:
                 entity_id: !input octopus_off_peak
                 state: "off"
               - condition: template
-                value_template: "{{not optimistic_enabled }}"
+                value_template: "{{ not optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 0
         sequence:
-#          - action: number.set_value
-#            alias: Set Discharge Current to 0, this stops the FoxESS battery draining into the car
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "0"
+          - alias: Set Workmode to Backup
+            action: select.select_option
+            target:
+              entity_id: !input foxess_cloud_work_mode
+            data:
+              option: Backup
           - alias: Notification
             choose:
               - alias: Notify if enabled
@@ -285,28 +342,51 @@ action:
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 0
-          - condition: state #Prevents execution when already charging due to multiple triggers
-            entity_id: !input foxess_cloud_work_mode
-            state:
-              - Self Use
-              - Feed-in First
-              - Force Discharge
-              - Back-up 
+          - condition: not #Prevents execution when already charging due to multiple triggers
+            conditions:
+              - condition: state
+                entity_id: !input foxess_cloud_scheduler_enable
+                state: "on"
+            alias: Not already in Force Charge Mode
         sequence:
-#          - action: number.set_value
-#            alias: Set Discharge Current to 0
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "0"
-          - action: select.select_option
-            alias: Set Work Mode to Charge
-            metadata: {}
+          - alias: Set Scheduler
+            action: foxess_cloud.set_schedule
             data:
-              option: Force Charge
-            target:
-              entity_id: !input foxess_cloud_work_mode
+              device_sn: 60JH602044GN150
+              groups:
+                #Night time to midnight charging 
+                - enable: 0
+                  startHour: 23
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # Midnight to early morning
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # (Daytime) Early morning to night time
+                - enable: 1
+                  startHour: 5
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 1000
+                  maxSoc: 100
           - alias: Notification
             choose:
               - alias: Notify if enabled
@@ -349,21 +429,17 @@ action:
               - tue
               - mon
           - condition: state
-            alias: Inverter is in Self use mode
+            alias: Inverter is in Backup mode
             entity_id: !input foxess_cloud_work_mode
             state:
-              - Self Use
-#          - condition: numeric_state
-#            entity_id: !input foxess_cloud_discharge_current
-#            below: 40
+              - Backup #This mode stops discharge, so battery protection is active
         sequence:
-#          - action: number.set_value
-#            alias: Set Discharge Current to 40
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "40"
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            data:
+              option: SelfUse
+            target:
+              entity_id: !input foxess_cloud_work_mode
           - alias: Notification
             choose:
               - alias: Notify if enabled
@@ -398,25 +474,50 @@ action:
               - tue
               - mon
           - condition: state
-            alias: Inverter is in Charging Mode
-            entity_id: !input foxess_cloud_work_mode
-            state:
-              - Force Charge
+            entity_id: !input foxess_cloud_scheduler_enable
+            state: "on"
+          - condition: state
+            entity_id: !input foxess_cloud_scheduler_work_mode
+            state: ForceCharge
         sequence:
-#          - action: number.set_value
-#            alias: Set Discharge Current to 40
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "40"
-          - action: select.select_option
-            alias: Set Work Mode to Self Use
-            metadata: {}
+          - alias: Set Scheduler
+            action: foxess_cloud.set_schedule
             data:
-              option: Self Use
-            target:
-              entity_id: !input foxess_cloud_work_mode
+              device_sn: 60JH602044GN150
+              groups:
+                #Night time to midnight charging 
+                - enable: 0
+                  startHour: 23
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # Midnight to early morning
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # (Daytime) Early morning to night time
+                - enable: 0
+                  startHour: 5
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 1000
+                  maxSoc: 100
           - alias: Notification
             choose:
               - alias: Notify if enabled
@@ -443,25 +544,50 @@ action:
             entity_id: !input hypervolt_ev_power
             below: 1
           - condition: state
-            alias: Inverter is in Charging Mode
-            entity_id: !input foxess_cloud_work_mode
-            state:
-              - Force Charge
+            entity_id: !input foxess_cloud_scheduler_enable
+            state: "on"
+          - condition: state
+            entity_id: !input foxess_cloud_scheduler_work_mode
+            state: ForceCharge
         sequence: 
-#          - action: number.set_value
-#            alias: Set Discharge Current to 40
-#            target:
-#              entity_id: !input foxess_cloud_discharge_current
-#            metadata: {}
-#            data:
-#              value: "40"
-          - action: select.select_option
-            alias: Set Work Mode to Self Use
-            metadata: {}
+          - alias: Set Scheduler
+            action: foxess_cloud.set_schedule
             data:
-              option: Self Use
-            target:
-              entity_id: !input foxess_cloud_work_mode
+              device_sn: 60JH602044GN150
+              groups:
+                #Night time to midnight charging 
+                - enable: 0
+                  startHour: 23
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # Midnight to early morning
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 3000
+                  maxSoc: 100
+                # (Daytime) Early morning to night time
+                - enable: 0
+                  startHour: 5
+                  startMinute: 31
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: 1000
+                  maxSoc: 100
           - alias: Notification
             choose:
               - alias: Notify if enabled
