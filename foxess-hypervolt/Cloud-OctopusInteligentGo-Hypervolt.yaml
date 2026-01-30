@@ -246,7 +246,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 1000
+                  fdPwr: 6000
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -397,7 +397,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 1000
+                  fdPwr: 6000
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -528,7 +528,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 1000
+                  fdPwr: 6000
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -598,7 +598,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 1000
+                  fdPwr: 6000
                   maxSoc: 100
           - alias: Notification
             choose:
