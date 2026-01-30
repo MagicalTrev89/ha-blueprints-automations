@@ -165,7 +165,7 @@ action:
             conditions:
               - condition: state
                 entity_id: !input foxess_cloud_scheduler_enable
-                state: "Running"
+                state: "on"
             alias: Not already in Force Charge Mode
         sequence:
           - action: select.select_option
@@ -316,7 +316,7 @@ action:
             conditions:
               - condition: state
                 entity_id: !input foxess_cloud_scheduler_enable
-                state: "Running"
+                state: "on"
             alias: Not already in Force Charge Mode
         sequence:
           - action: select.select_option
@@ -451,7 +451,7 @@ action:
               - mon
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
-            state: "Running"
+            state: "on"
         sequence:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
@@ -518,7 +518,7 @@ action:
             below: 1
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
-            state: "Running"
+            state: "on"
         sequence: 
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
