@@ -37,6 +37,14 @@ blueprint:
           filter:
             domain: select
             integration: foxess_cloud
+    foxess_cloud_scheduler_enable:
+      name: FoxESS Cloud Inverter Scheduler Enabled
+      description: Sensor that shows if the FoxESS Cloud scheduler is enabled
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+            integration: foxess_cloud
     foxess_cloud_inverter_serial:
       name: FoxESS Cloud Inverter Serial Number
       description: The serial number of the FoxESS inverter to control, needed for scheduling
@@ -157,7 +165,7 @@ action:
             conditions:
               - condition: state
                 entity_id: !input foxess_cloud_scheduler_enable
-                state: "on"
+                state: "Running"
             alias: Not already in Force Charge Mode
         sequence:
           - action: select.select_option
@@ -308,7 +316,7 @@ action:
             conditions:
               - condition: state
                 entity_id: !input foxess_cloud_scheduler_enable
-                state: "on"
+                state: "Running"
             alias: Not already in Force Charge Mode
         sequence:
           - action: select.select_option
@@ -443,7 +451,7 @@ action:
               - mon
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
-            state: "on"
+            state: "Running"
           - condition: state
             entity_id: !input foxess_cloud_scheduler_work_mode
             state: ForceCharge
@@ -513,7 +521,7 @@ action:
             below: 1
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
-            state: "on"
+            state: "Running"
           - condition: state
             entity_id: !input foxess_cloud_scheduler_work_mode
             state: ForceCharge
