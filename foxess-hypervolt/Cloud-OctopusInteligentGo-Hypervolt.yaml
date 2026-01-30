@@ -452,9 +452,6 @@ action:
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
             state: "Running"
-          - condition: state
-            entity_id: !input foxess_cloud_scheduler_work_mode
-            state: ForceCharge
         sequence:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
@@ -522,9 +519,6 @@ action:
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
             state: "Running"
-          - condition: state
-            entity_id: !input foxess_cloud_scheduler_work_mode
-            state: ForceCharge
         sequence: 
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
