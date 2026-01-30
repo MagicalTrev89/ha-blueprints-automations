@@ -30,23 +30,6 @@ blueprint:
           filter:
             integration: octopus_energy
             domain: binary_sensor
-#    foxess_cloud_discharge_current:
-#      name: FoxESS Inverter Discharge Current
-#      selector:
-#        entity:
-#          filter:
-#            domain: number
-#            integration: foxess_modbus
-#Instead of discharge current, putting the inverter into Backup mode stops discharge
-
-#Max state of charge was not be default enabled
-#    foxess_cloud_max_soc:
-#      name: FoxESS Inverter Max SOC
-#      selector:
-#        entity:
-#          filter:
-#            domain: number
-#            integration: foxess_modbus
     foxess_cloud_work_mode:
       name: FoxESS Cloud Inverter Work Mode
       selector:
@@ -54,48 +37,21 @@ blueprint:
           filter:
             domain: select
             integration: foxess_cloud
-    foxess_cloud_scheduler_enable:
-      name: FoxESS Cloud Inverter Scheduler Enable
+    foxess_cloud_inverter_serial:
+      name: FoxESS Cloud Inverter Serial Number
+      description: The serial number of the FoxESS inverter to control, needed for scheduling
       selector:
-        entity:
-          filter:
-            domain: switch
-            integration: foxess_cloud
-    foxess_cloud_scheduler_start_time:
-      name: FoxESS Cloud Inverter Scheduler Start Time
+        text:
+    foxess_cloud_charge_rate:
+      name: FoxESS Cloud Inverter Charge Rate in Watts
+      description: Enter the desired charge rate in Watts, i.e 3000 for 3kW
+      default: 3000
       selector:
-        entity:
-          filter:
-            domain: time
-            integration: foxess_cloud
-    foxess_cloud_scheduler_end_time:
-      name: FoxESS Cloud Inverter Scheduler End Time
-      selector:
-        entity:
-          filter:
-            domain: time
-            integration: foxess_cloud
-    foxess_cloud_scheduler_power:
-      name: FoxESS Cloud Inverter Scheduler Power
-      selector:
-        entity:
-          filter:
-            domain: number
-            integration: foxess_cloud
-    foxess_cloud_scheduler_work_mode: #ForceCharge is the typical option
-      name: FoxESS Cloud Inverter Scheduler Work Mode
-      selector:
-        entity:
-          filter:
-            domain: select
-            integration: foxess_cloud
-    foxess_cloud_scheduler_set:
-      name: FoxESS Cloud Inverter Scheduler Set
-      selector:
-        entity:
-          filter:
-            domain: button
-            integration: foxess_cloud
+        number:
+          min: 1000
+          max: 10000
+          step: 1000
+          unit_of_measurement: W
     hypervolt_ev_power:
       name: Hypervolt EV Power
       description: Sensor to monitor the power being used by the Hypervolt EV charger
@@ -213,7 +169,7 @@ action:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
-              device_sn: 60JH602044GN150
+              device_sn: !input foxess_cloud_inverter_serial
               groups:
                 #Night time to midnight charging 
                 - enable: 1
@@ -364,7 +320,7 @@ action:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
-              device_sn: 60JH602044GN150
+              device_sn: !input foxess_cloud_inverter_serial
               groups:
                 #Night time to midnight charging 
                 - enable: 0
@@ -495,7 +451,7 @@ action:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
-              device_sn: 60JH602044GN150
+              device_sn: !input foxess_cloud_inverter_serial
               groups:
                 #Night time to midnight charging 
                 - enable: 0
@@ -565,7 +521,7 @@ action:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
-              device_sn: 60JH602044GN150
+              device_sn: !input foxess_cloud_inverter_serial
               groups:
                 #Night time to midnight charging 
                 - enable: 0
