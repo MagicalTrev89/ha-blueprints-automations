@@ -204,6 +204,12 @@ action:
                 state: "on"
             alias: Not already in Force Charge Mode
         sequence:
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            data:
+              option: SelfUse
+            target:
+              entity_id: !input foxess_cloud_work_mode
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
@@ -349,6 +355,12 @@ action:
                 state: "on"
             alias: Not already in Force Charge Mode
         sequence:
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            data:
+              option: SelfUse
+            target:
+              entity_id: !input foxess_cloud_work_mode
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
