@@ -192,7 +192,7 @@ action:
                   fdPwr: 3000
                   maxSoc: 100
                 # Midnight to early morning
-                - enable: 0
+                - enable: 1
                   startHour: 0
                   startMinute: 0
                   endHour: 5
