@@ -193,7 +193,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # Midnight to early morning
                 - enable: 1
@@ -204,7 +204,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # (Daytime) Early morning to night time
                 - enable: 0
@@ -215,7 +215,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 6000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -344,7 +344,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # Midnight to early morning
                 - enable: 0
@@ -355,7 +355,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # (Daytime) Early morning to night time
                 - enable: 1
@@ -366,7 +366,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 6000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -431,7 +431,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # Midnight to early morning
                 - enable: 1
@@ -442,7 +442,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # (Daytime) Early morning to night time
                 - enable: 1
@@ -453,7 +453,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 6000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -559,7 +559,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # Midnight to early morning
                 - enable: 0
@@ -570,7 +570,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # (Daytime) Early morning to night time
                 - enable: 0
@@ -581,7 +581,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 6000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
           - alias: Notification
             choose:
@@ -626,7 +626,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # Midnight to early morning
                 - enable: 0
@@ -637,7 +637,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 3000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
                 # (Daytime) Early morning to night time
                 - enable: 0
@@ -648,7 +648,7 @@ action:
                   workMode: ForceCharge
                   minSocOnGrid: 20
                   fdSoc: 100
-                  fdPwr: 6000
+                  fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
           - alias: Notification
             choose:
