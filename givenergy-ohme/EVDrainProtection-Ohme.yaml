@@ -5,38 +5,20 @@ blueprint:
   description: > 
     # Overview
     
-    When using Octopus Energy with a GivEnergy Inverter and Ohme charger, this automation will prevent GivEnergy battery discharge into the car while
+    When using a GivEnergy Inverter and Ohme charger, this automation will prevent GivEnergy battery discharge into the car while
     charging.
-    Octopus provide intelligent charging windows during the day, this blueprint will charge the GivEnergy battery during these
-    windows to ensure that the car is charged using the cheapest electricity.
-    Octopus also provide off peak electricity at night, this blueprint will also charge the battery during these times.
+
+    Additionally, if you have a time of use tariff with cheap electricity at night, this automation will also charge the battery at night to ensure that the home is charged using the cheapest electricity.
+    
+    # How it works
+
+    The automation has two main functions, the first is to monitor the power being used by the Ohme EV charger, if it detects that the car is charging (using more than 1kw) it will enable the GivEnergy Inverter to allow charging from the grid, this will prevent the battery from discharging into the car while charging.
+    The second function is to monitor the time of day, if it detects that the time is within the cheap electricity period, it will also enable the GivEnergy Inverter to allow charging from the grid, this will ensure that the home is charged using the cheapest electricity.
 
   domain: automation
   homeassistant:
     min_version: 2025.8.3
   input:
-#    givenergy_modbus_discharge_current:
-#      name: GivEnergy Inverter Discharge Current
-#      selector:
-#        entity:
-#          filter:
-#            domain: number
-#            integration: givenergy_local
-#    givenergy_modbus_max_soc:
-#      name: GivEnergy Inverter Max SOC
-#      selector:
-#        entity:
-#          filter:
-#            domain: number
-#            integration: givenergy_local
-#    givenergy_modbus_work_mode:
-#      name: GivEnergy Inverter Work Mode
-#      selector:
-#        entity:
-#          filter:
-#            domain: select
-#            integration: givenergy_local
-
     givenergy_battery_ac_charging:
       name: GivEnergy Battery AC Charging
       description: This is the sensor that enables or disables charging from the grid.
