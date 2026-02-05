@@ -1,0 +1,247 @@
+blueprint:
+  name: EV Drain Protection - GivEnergy - Ohme
+  author: PowerLockr.co.uk
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/givenergy-ohme/EVDrainProtection-Ohme.yaml
+  description: > 
+    # Overview
+    
+    When using Octopus Energy with a GivEnergy Inverter and Ohme charger, this automation will prevent GivEnergy battery discharge into the car while
+    charging.
+    Octopus provide intelligent charging windows during the day, this blueprint will charge the GivEnergy battery during these
+    windows to ensure that the car is charged using the cheapest electricity.
+    Octopus also provide off peak electricity at night, this blueprint will also charge the battery during these times.
+
+  domain: automation
+  homeassistant:
+    min_version: 2025.8.3
+  input:
+#    givenergy_modbus_discharge_current:
+#      name: GivEnergy Inverter Discharge Current
+#      selector:
+#        entity:
+#          filter:
+#            domain: number
+#            integration: givenergy_local
+#    givenergy_modbus_max_soc:
+#      name: GivEnergy Inverter Max SOC
+#      selector:
+#        entity:
+#          filter:
+#            domain: number
+#            integration: givenergy_local
+#    givenergy_modbus_work_mode:
+#      name: GivEnergy Inverter Work Mode
+#      selector:
+#        entity:
+#          filter:
+#            domain: select
+#            integration: givenergy_local
+
+    givenergy_battery_ac_charging:
+      name: GivEnergy Battery AC Charging
+      description: This is the sensor that enables or disables charging from the grid.
+      selector:
+        entity:
+          filter:
+            domain: number
+            integration: givenergy_local
+
+    cheap_period_start:
+      name: Start of Cheap Energy Period
+      description: When does the overnight cheap period start? If it starts at 23:30, set this to 23:31 to prevent time issues between HA and Energy Provider.
+      selector:
+        time:
+
+    cheap_period_end:
+      name: End of Cheap Energy Period
+      description: When does the overnight cheap period end? If it ends at 05:30, set this to 05:29 to prevent time issues between HA and Energy Provider
+      selector:
+        time:
+
+    ohme_ev_power:
+      name: Ohme EV Power
+      description: Sensor to monitor the power being used by the Ohme EV charger
+      default: sensor.ohme_home_go_power
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: ohme
+
+    notification_device:
+      name: Notification Device
+      default: notify.notify
+      description: The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone, unfortuently, its not possible to provide a workable dropdown, you must get the name, or use the default notify.notify to send to all devices in Home Assistant.
+      selector:
+        text:
+    notification_event:
+      name: Notification Event
+      description: This sends a notification event to home-assistant which can used by other automations i.e blueprint-notification
+      default: blueprint-notification
+      selector:
+        text:
+    notification_enabled:
+      name: Do you want to enable notifications?
+      description: Enable or disable sending notifications
+      default: true
+      selector:
+        boolean:
+variables:
+  notification_enabled: !input notification_enabled
+triggers:
+  # These are the Charging Triggers
+
+  - trigger: numeric_state
+    id : ohme_ev_charging_above_1
+    alias: Ohme EV charging (detected above 1kw)
+    entity_id: !input ohme_ev_power
+    above: 1
+    # Time is needed because the car might be plugged in, not charging, but the cheap electricity is already on
+    # This happens when the car has completed charging before 23:00 but octopus hasnt updated.
+  - trigger: time
+    id: cheap_period_start
+    alias: Start of Cheap Electricity Period
+    at: !input cheap_period_start
+  # end of charging triggers
+
+  # Start of stop charging triggers
+  - trigger: time
+    id: cheap_period_end
+    alias : End of Cheap Electricity Period
+    at: !input cheap_period_end
+
+  - trigger: numeric_state
+    id: ohme_ev_charging_below_1
+    alias: Ohme EV stopped charging (detected below 1kw)
+    entity_id: !input ohme_ev_power
+    below: 1
+    enabled: true
+  # end of stop charging triggers
+
+action:
+  # Start Charging Actions
+  # 1) charging day and night Options
+  - alias: Start Charging Actions
+    choose:
+      - conditions:
+          - condition: trigger
+            id: 
+              - ohme_ev_charging_above_1
+              - cheap_period_start
+          - condition: state
+            entity_id: !input givenergy_battery_ac_charging
+            state: "off"
+            alias: Not already in Charge Mode
+        sequence:
+          - alias: Set Inverter to Charge Mode 
+            action: switch.turn_on
+            target:
+              entity_id: !input givenergy_battery_ac_charging
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Charging"
+                      message: "Started Charging due to: {{ trigger.alias }}"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Started Charging due to: {{ trigger.alias }}"
+        alias: START CHARGE
+
+  # End Charging Actions
+
+  # Stop Charging Actions
+  - alias: Stop Charging Actions
+    choose:
+      - conditions:
+      # This condition triggers usually only if the battery protection has kicked in but the charging never starts, this sometimes happens
+      # for some reason, maybe its that octopus changes its mind
+      # not tested but this condition will likely be good for a charge boost
+          - condition: trigger
+            id:
+              - ohme_ev_charging_below_1
+          - condition: time
+            after: !input cheap_period_end
+            before: !input cheap_period_start
+            weekday:
+              - sun
+              - sat
+              - fri
+              - wed
+              - thu
+              - tue
+              - mon
+          - condition: state
+            entity_id: !input givenergy_battery_ac_charging
+            state: "on"
+            alias: Is Battery Charging
+        sequence:
+          - alias: Set Inverter to Not Charging Mode 
+            action: switch.turn_off
+            target:
+              entity_id: !input givenergy_battery_ac_charging
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Charging
+                      message: "Stopped: {{ trigger.alias }}"
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Stopped: {{ trigger.alias }}"
+        alias: Car Stops charging during Day, Stop Charging
+
+      - conditions:
+          - condition: trigger
+            id:
+              - !input cheap_period_end
+          - condition: numeric_state
+            entity_id: !input ohme_ev_power
+            below: 1
+          - condition: state
+            entity_id: !input givenergy_battery_ac_charging
+            state: "on"
+            alias: Is Battery Charging
+        sequence: 
+          - alias: Set Inverter to Not Charging Mode 
+            action: switch.turn_off
+            target:
+              entity_id: !input givenergy_battery_ac_charging
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:                
+                  - condition: template
+                    alias: Are Notifications Enabled? 
+                    value_template: >- 
+                      {{ notification_enabled }}
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Battery Charging
+                      message: "Stopped: End of Night, Car Not Charging, Stopped Charging"         
+          - event: !input notification_event
+            event_data:
+              title: Battery Charging
+              message: "Stopped: End of Night, Car Not Charging, Stopped Charging"
+        alias: End of night, car isnt charging, stop charge
+
+  # End Stop Charging Actions
+mode: single
+max_exceeded: silent
