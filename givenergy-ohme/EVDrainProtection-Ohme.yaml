@@ -43,7 +43,7 @@ blueprint:
       selector:
         entity:
           filter:
-            domain: number
+            domain: switch
             integration: givenergy_local
 
     cheap_period_start:
