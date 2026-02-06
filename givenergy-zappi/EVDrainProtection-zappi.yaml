@@ -191,7 +191,7 @@ action:
       - conditions:
           - condition: trigger
             id:
-              - !input cheap_period_end
+              - cheap_period_end
           - condition: numeric_state
             entity_id: !input zappi_ev_power
             below: 1
