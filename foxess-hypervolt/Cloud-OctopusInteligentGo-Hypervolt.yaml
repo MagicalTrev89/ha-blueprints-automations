@@ -102,11 +102,21 @@ blueprint:
       default: false
       selector:
         boolean:
+    automation_mode:
+      name: Automation Mode
+      description: Choose the automation behavior - "charge" to enable full charging automation, "protection" to only enable battery protection (prevents discharge while car charges, no active charging)
+      default: charge
+      selector:
+        select:
+          options:
+            - charge
+            - protection
 variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
   notification_enabled: !input notification_enabled
   optimistic_enabled: !input optimistic_enabled
+  automation_mode: !input automation_mode
   fox_discharge_entity: !input foxess_cloud_battery_discharge_power
   fox_work_mode_entity: !input foxess_cloud_work_mode
   fox_scheduler_entity: !input foxess_cloud_scheduler_enable
@@ -206,6 +216,9 @@ action:
                 entity_id: !input foxess_cloud_scheduler_enable
                 state: "on"
             alias: Not already in Force Charge Mode
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - action: select.select_option
             alias: Set Work Mode to Self Use
@@ -288,13 +301,17 @@ action:
               - wed
               - tue
               - mon
-          - condition: and
+          - condition: or
             conditions:
-              - condition: state
-                entity_id: !input octopus_off_peak
-                state: "off"
               - condition: template
-                value_template: "{{ not optimistic_enabled }}"
+                value_template: "{{ automation_mode == 'protection' }}"
+              - condition: and
+                conditions:
+                  - condition: state
+                    entity_id: !input octopus_off_peak
+                    state: "off"
+                  - condition: template
+                    value_template: "{{ not optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 0
@@ -357,6 +374,9 @@ action:
                 entity_id: !input foxess_cloud_scheduler_enable
                 state: "on"
             alias: Not already in Force Charge Mode
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - action: select.select_option
             alias: Set Work Mode to Self Use
@@ -450,6 +470,9 @@ action:
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
             state: "on"
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - alias: Change Scheduler
             action: foxess_cloud.set_schedule
