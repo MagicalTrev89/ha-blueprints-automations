@@ -160,6 +160,13 @@ triggers:
   # end of stop charging triggers
 
   # FoxESS Cloud health triggers
+
+  - trigger: numeric_state
+    id : foxess_cloud_battery_discharge_above_2
+    alias: FoxESS Cloud Battery Discharge (detected above 2kw)
+    entity_id: !input foxess_cloud_battery_discharge_power
+    above: 2000
+
   - trigger: state
     id: foxess_discharge_sensor_bad
     entity_id: !input foxess_cloud_battery_discharge_power
@@ -762,24 +769,11 @@ action:
         conditions:
           - condition: trigger
             id:
-              - hypervolt_ev_charging_above_1
-
-          # Guard: ALL required FoxESS sensors must be available
-          - condition: template
-            alias: FoxESS sensors available
-            value_template: >
-              {{
-                states(fox_discharge_entity) not in ['unknown','unavailable','none']
-                and states(fox_work_mode_entity) not in ['unknown','unavailable','none']
-                and states(fox_scheduler_entity) not in ['unknown','unavailable','none']
-              }}
+              - foxess_cloud_battery_discharge_above_2
+          - condition: numeric_state
+            entity_id: !input hypervolt_ev_power
+            above: 1
         sequence:
-          - delay:
-              minutes: 6
-
-          - condition: template
-            value_template: >
-              {{ (states(fox_discharge_entity) | float(0)) > 2000 }}
 
           - alias: Notification
             choose:
