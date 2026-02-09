@@ -145,6 +145,28 @@ triggers:
     enabled: true
   # end of stop charging triggers
 
+  # FoxESS Cloud health triggers
+  - trigger: state
+    id: foxess_discharge_sensor_bad
+    entity_id: !input foxess_cloud_battery_discharge_power
+    to:
+      - "unavailable"
+      - "unknown"
+
+  - trigger: state
+    id: foxess_work_mode_bad
+    entity_id: !input foxess_cloud_work_mode
+    to:
+      - "unavailable"
+      - "unknown"
+
+  - trigger: state
+    id: foxess_scheduler_enable_bad
+    entity_id: !input foxess_cloud_scheduler_enable
+    to:
+      - "unavailable"
+      - "unknown"
+
 action:
   # Start Charging Actions
   # 1) Over night Options
@@ -682,19 +704,55 @@ action:
   # Error Charging Actions
   - alias: Battery Discharge Power Check (Notify)
     choose:
-      - conditions:
+      # OPTION A: Cloud integration bad (separate branch)
+      - alias: ERROR - FoxESS Cloud integration bad / sensors unavailable
+        conditions:
+          - condition: trigger
+            id:
+              - foxess_discharge_sensor_bad
+              - foxess_work_mode_bad
+              - foxess_scheduler_enable_bad
+        sequence:
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "FoxESS Cloud Error"
+                      message: "FoxESS Cloud integration looks unhealthy (sensor unavailable/unknown). Automations may not work correctly."
+          - event: !input notification_event
+            event_data:
+              title: FoxESS Cloud Error
+              message: "FoxESS Cloud integration looks unhealthy (sensor unavailable/unknown). Automations may not work correctly."
+
+      # OPTION B: EV started charging -> delay -> check discharge (guard multiple sensors)
+      - alias: CHECK - Battery discharging to EV
+        conditions:
           - condition: trigger
             id:
               - hypervolt_ev_charging_above_1
+
+          # Guard: ALL required FoxESS sensors must be available
+          - condition: template
+            alias: FoxESS sensors available
+            value_template: >
+              {{
+                states(!input foxess_cloud_battery_discharge_power) not in ['unknown','unavailable','none']
+                and states(!input foxess_cloud_work_mode) not in ['unknown','unavailable','none']
+                and states(!input foxess_cloud_scheduler_enable) not in ['unknown','unavailable','none']
+              }}
         sequence:
-          # Wait 6 minutes after charging starts
           - delay:
               minutes: 6
 
-          # Now check discharge power
-          - condition: numeric_state
-            entity_id: !input foxess_cloud_battery_discharge_power
-            above: 2000
+          - condition: template
+            value_template: >
+              {{ (states(!input foxess_cloud_battery_discharge_power) | float(0)) > 2000 }}
 
           - alias: Notification
             choose:
