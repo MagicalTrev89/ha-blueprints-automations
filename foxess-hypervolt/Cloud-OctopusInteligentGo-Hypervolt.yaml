@@ -687,9 +687,9 @@ action:
             id:
               - hypervolt_ev_charging_above_1
         sequence:
-          # Wait 2 minutes after charging starts
+          # Wait 6 minutes after charging starts
           - delay:
-              minutes: 2
+              minutes: 6
 
           # Now check discharge power
           - condition: numeric_state
