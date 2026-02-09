@@ -770,11 +770,14 @@ action:
           - condition: trigger
             id:
               - foxess_cloud_battery_discharge_above_2
+              - hypervolt_ev_charging_above_1
           - condition: numeric_state
             entity_id: !input hypervolt_ev_power
             above: 1
+          - condition: numeric_state
+            entity_id: !input foxess_cloud_battery_discharge_power
+            above: 2000
         sequence:
-
           - alias: Notification
             choose:
               - alias: Notify if enabled
