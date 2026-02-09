@@ -70,6 +70,14 @@ blueprint:
           filter:
             domain: sensor
             integration: myenergi
+    foxess_cloud_battery_discharge_power:
+      name: FoxESS Cloud Battery Discharge Power (W)
+      description: Sensor showing battery discharge power in Watts (positive number when discharging).
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: foxess_cloud
 
     notification_device:
       name: Notification Device
@@ -95,11 +103,24 @@ blueprint:
       default: false
       selector:
         boolean:
+    automation_mode:
+      name: Automation Mode
+      description: Choose the automation behavior - "charge" to enable full charging automation, "protection" to only enable battery protection (prevents discharge while car charges, no active charging)
+      default: charge
+      selector:
+        select:
+          options:
+            - charge
+            - protection
 variables:
   dispatch_entity: !input octopus_dispatching
   off_peak_entity: !input octopus_off_peak
   notification_enabled: !input notification_enabled
   optimistic_enabled: !input optimistic_enabled
+  automation_mode: !input automation_mode
+  fox_discharge_entity: !input foxess_cloud_battery_discharge_power
+  fox_work_mode_entity: !input foxess_cloud_work_mode
+  fox_scheduler_entity: !input foxess_cloud_scheduler_enable
 triggers:
   # These are the Charging Triggers
   - trigger: state
@@ -117,6 +138,11 @@ triggers:
   - trigger: time
     id: Time 23:31:00
     at: "23:31:00"
+  # This is needed to check if the car is still charging before night time cheap electricity starts
+  # If it is then we need to enable the nightime schedule
+  - trigger: time
+    id: Time 23:29:00
+    at: "23:29:00"
   # end of charging triggers
 
   # Start of stop charging triggers
@@ -131,12 +157,36 @@ triggers:
     entity_id: !input zappi_ev_power
     below: 1
     enabled: true
-  # This is needed to check if the car is still charging before night time cheap electricity starts
-  # If it is then we need to enable the nightime schedule
-  - trigger: time
-    id: Time 23:29:00
-    at: "23:29:00"
-  # end of charging triggers
+  # end of stop charging triggers
+
+  # FoxESS Cloud health triggers
+
+  - trigger: numeric_state
+    id : foxess_cloud_battery_discharge_above_2
+    alias: FoxESS Cloud Battery Discharge (detected above 2kw)
+    entity_id: !input foxess_cloud_battery_discharge_power
+    above: 2000
+
+  - trigger: state
+    id: foxess_discharge_sensor_bad
+    entity_id: !input foxess_cloud_battery_discharge_power
+    to:
+      - "unavailable"
+      - "unknown"
+
+  - trigger: state
+    id: foxess_work_mode_bad
+    entity_id: !input foxess_cloud_work_mode
+    to:
+      - "unavailable"
+      - "unknown"
+
+  - trigger: state
+    id: foxess_scheduler_enable_bad
+    entity_id: !input foxess_cloud_scheduler_enable
+    to:
+      - "unavailable"
+      - "unknown"
 
 action:
   # Start Charging Actions
@@ -173,6 +223,9 @@ action:
                 entity_id: !input foxess_cloud_scheduler_enable
                 state: "on"
             alias: Not already in Force Charge Mode
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - action: select.select_option
             alias: Set Work Mode to Self Use
@@ -255,13 +308,17 @@ action:
               - wed
               - tue
               - mon
-          - condition: and
+          - condition: or
             conditions:
-              - condition: state
-                entity_id: !input octopus_off_peak
-                state: "off"
               - condition: template
-                value_template: "{{ not optimistic_enabled }}"
+                value_template: "{{ automation_mode == 'protection' }}"
+              - condition: and
+                conditions:
+                  - condition: state
+                    entity_id: !input octopus_off_peak
+                    state: "off"
+                  - condition: template
+                    value_template: "{{ not optimistic_enabled }}"
           - condition: numeric_state
             entity_id: !input zappi_ev_power
             above: 0
@@ -324,6 +381,9 @@ action:
                 entity_id: !input foxess_cloud_scheduler_enable
                 state: "on"
             alias: Not already in Force Charge Mode
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - action: select.select_option
             alias: Set Work Mode to Self Use
@@ -417,6 +477,9 @@ action:
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
             state: "on"
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
         sequence:
           - alias: Change Scheduler
             action: foxess_cloud.set_schedule
@@ -671,5 +734,66 @@ action:
         alias: When its end of night, car isnt charging, stop charge
 
   # End Stop Charging Actions
+
+  # Error Charging Actions
+  - alias: Battery Discharge Power Check (Notify)
+    choose:
+      # OPTION A: Cloud integration bad (separate branch)
+      - alias: ERROR - FoxESS Cloud integration bad / sensors unavailable
+        conditions:
+          - condition: trigger
+            id:
+              - foxess_discharge_sensor_bad
+              - foxess_work_mode_bad
+              - foxess_scheduler_enable_bad
+        sequence:
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "FoxESS Cloud Error"
+                      message: "FoxESS Cloud integration looks unhealthy (sensor unavailable/unknown). Automations may not work correctly."
+          - event: !input notification_event
+            event_data:
+              title: FoxESS Cloud Error
+              message: "FoxESS Cloud integration looks unhealthy (sensor unavailable/unknown). Automations may not work correctly."
+
+      # OPTION B: EV started charging -> delay -> check discharge (guard multiple sensors)
+      - alias: CHECK - Battery discharging to EV
+        conditions:
+          - condition: trigger
+            id:
+              - foxess_cloud_battery_discharge_above_2
+              - zappi_ev_charging_above_1
+          - condition: numeric_state
+            entity_id: !input zappi_ev_power
+            above: 1
+          - condition: numeric_state
+            entity_id: !input foxess_cloud_battery_discharge_power
+            above: 2000
+        sequence:
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharging to EV"
+                      message: "Battery discharge is above 2000W while the car is charging."
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharging to EV
+              message: "Battery discharge is above 2000W while the car is charging."
+
 mode: single
 max_exceeded: silent
