@@ -60,6 +60,14 @@ blueprint:
           max: 10000
           step: 1000
           unit_of_measurement: W
+    foxess_cloud_battery_discharge_power:
+      name: FoxESS Cloud Battery Discharge Power (W)
+      description: Sensor showing battery discharge power in Watts (positive number when discharging).
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            integration: foxess_cloud
     hypervolt_ev_power:
       name: Hypervolt EV Power
       description: Sensor to monitor the power being used by the Hypervolt EV charger
@@ -670,5 +678,41 @@ action:
         alias: When its end of night, car isnt charging, stop charge
 
   # End Stop Charging Actions
+
+  # Error Charging Actions
+  - alias: Battery Discharge Power Check (Notify)
+    choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - hypervolt_ev_charging_above_1
+        sequence:
+          # Wait 2 minutes after charging starts
+          - delay:
+              minutes: 2
+
+          # Now check discharge power
+          - condition: numeric_state
+            entity_id: !input foxess_cloud_battery_discharge_power
+            above: 2000
+
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharging to EV"
+                      message: "Battery discharge is above 2000W while the car is charging."
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharging to EV
+              message: "Battery discharge is above 2000W while the car is charging."
+              message: "Battery discharge is above 2000W while the car is charging."
+
 mode: single
 max_exceeded: silent
