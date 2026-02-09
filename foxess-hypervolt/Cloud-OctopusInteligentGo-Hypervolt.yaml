@@ -712,7 +712,6 @@ action:
             event_data:
               title: Battery Discharging to EV
               message: "Battery discharge is above 2000W while the car is charging."
-              message: "Battery discharge is above 2000W while the car is charging."
 
 mode: single
 max_exceeded: silent
