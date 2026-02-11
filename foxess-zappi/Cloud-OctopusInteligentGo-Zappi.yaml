@@ -297,17 +297,17 @@ action:
               - octopus_off_peak_on
               - zappi_ev_charging_above_1
               - Time 23:31:00
-          - condition: time
-            after: "05:30:00"
-            before: "23:30:00"
-            weekday:
-              - sun
-              - sat
-              - fri
-              - thu
-              - wed
-              - tue
-              - mon
+          #- condition: time
+          #  after: "05:30:00"
+          #  before: "23:30:00"
+          #  weekday:
+          #    - sun
+          #    - sat
+          #    - fri
+          #    - thu
+          #    - wed
+          #    - tue
+          #    - mon
           - condition: or
             conditions:
               - condition: template
