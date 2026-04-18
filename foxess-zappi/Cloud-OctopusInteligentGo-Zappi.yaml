@@ -78,6 +78,28 @@ blueprint:
           filter:
             domain: sensor
             integration: foxess_cloud
+    foxess_force_discharge_enable:
+      name: FoxESS Force Battery Discharge
+      description: Enable to allow the battery to force discharge during the configured discharge window. Note - this is a static blueprint setting, re-save the automation to change it.
+      default: false
+      selector:
+        boolean:
+    foxess_cloud_discharge_rate:
+      name: FoxESS Cloud Inverter Discharge Rate in Watts
+      description: Enter the desired discharge rate in Watts, i.e 3000 for 3kW
+      default: 3000
+      selector:
+        number:
+          min: 1000
+          max: 10000
+          step: 1000
+          unit_of_measurement: W
+    foxess_discharge_start_time:
+      name: FoxESS Discharge Start Time
+      description: Time to start force discharging the battery. Discharge will run until 23:29 (just before the overnight cheap period).
+      default: "22:30:00"
+      selector:
+        time:
 
     notification_device:
       name: Notification Device
@@ -121,6 +143,8 @@ variables:
   fox_discharge_entity: !input foxess_cloud_battery_discharge_power
   fox_work_mode_entity: !input foxess_cloud_work_mode
   fox_scheduler_entity: !input foxess_cloud_scheduler_enable
+  force_discharge_enable: !input foxess_force_discharge_enable
+  discharge_start_time: !input foxess_discharge_start_time
 triggers:
   # These are the Charging Triggers
   - trigger: state
@@ -143,6 +167,9 @@ triggers:
   - trigger: time
     id: Time 23:29:00
     at: "23:29:00"
+  - trigger: time
+    id: force_discharge_start_time
+    at: !input foxess_discharge_start_time
   # end of charging triggers
 
   # Start of stop charging triggers
@@ -271,13 +298,23 @@ action:
                   fdSoc: 100
                   fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
+                # Force Discharge - disabled unless START DISCHARGE enables it
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
           - alias: Notification
             choose:
               - alias: Notify if enabled
-                conditions:                
+                conditions:
                   - condition: template
-                    alias: Are Notifications Enabled? 
-                    value_template: >- 
+                    alias: Are Notifications Enabled?
+                    value_template: >-
                       {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
@@ -429,13 +466,23 @@ action:
                   fdSoc: 100
                   fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
+                # Force Discharge - disabled unless START DISCHARGE enables it
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
           - alias: Notification
             choose:
               - alias: Notify if enabled
-                conditions:                
+                conditions:
                   - condition: template
-                    alias: Are Notifications Enabled? 
-                    value_template: >- 
+                    alias: Are Notifications Enabled?
+                    value_template: >-
                       {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
@@ -519,13 +566,23 @@ action:
                   fdSoc: 100
                   fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
+                # Force Discharge - disabled unless START DISCHARGE enables it
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
           - alias: Notification
             choose:
               - alias: Notify if enabled
-                conditions:                
+                conditions:
                   - condition: template
-                    alias: Are Notifications Enabled? 
-                    value_template: >- 
+                    alias: Are Notifications Enabled?
+                    value_template: >-
                       {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
@@ -608,13 +665,23 @@ action:
           - condition: state
             entity_id: !input foxess_cloud_scheduler_enable
             state: "on"
+          - condition: not
+            alias: Not in force discharge window
+            conditions:
+              - condition: template
+                value_template: >
+                  {% set now_mins = now().hour * 60 + now().minute %}
+                  {% set start_h = discharge_start_time.split(':')[0] | int %}
+                  {% set start_m = discharge_start_time.split(':')[1] | int %}
+                  {% set start_mins = start_h * 60 + start_m %}
+                  {{ force_discharge_enable and now_mins >= start_mins and now_mins < (23 * 60 + 29) }}
         sequence:
           - alias: Set Scheduler
             action: foxess_cloud.set_schedule
             data:
               device_sn: !input foxess_cloud_inverter_serial
               groups:
-                #Night time to midnight charging 
+                #Night time to midnight charging
                 - enable: 0
                   startHour: 23
                   startMinute: 30
@@ -647,13 +714,23 @@ action:
                   fdSoc: 100
                   fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
+                # Force Discharge - disabled unless START DISCHARGE enables it
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
           - alias: Notification
             choose:
               - alias: Notify if enabled
-                conditions:                
+                conditions:
                   - condition: template
-                    alias: Are Notifications Enabled? 
-                    value_template: >- 
+                    alias: Are Notifications Enabled?
+                    value_template: >-
                       {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
@@ -714,13 +791,23 @@ action:
                   fdSoc: 100
                   fdPwr: !input foxess_cloud_charge_rate
                   maxSoc: 100
+                # Force Discharge - disabled unless START DISCHARGE enables it
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
           - alias: Notification
             choose:
               - alias: Notify if enabled
-                conditions:                
+                conditions:
                   - condition: template
-                    alias: Are Notifications Enabled? 
-                    value_template: >- 
+                    alias: Are Notifications Enabled?
+                    value_template: >-
                       {{ notification_enabled }}
                 sequence:
                   - service: !input notification_device
@@ -734,6 +821,347 @@ action:
         alias: When its end of night, car isnt charging, stop charge
 
   # End Stop Charging Actions
+
+  # Start Discharge Actions
+  - alias: Start Discharge Actions
+    choose:
+      - alias: START DISCHARGE - Force discharge enabled, car not charging
+        conditions:
+          - condition: trigger
+            id:
+              - force_discharge_start_time
+          - condition: template
+            value_template: "{{ force_discharge_enable }}"
+            alias: Force discharge is enabled
+          - condition: numeric_state
+            entity_id: !input zappi_ev_power
+            below: 1
+            alias: Car is not charging
+        sequence:
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            data:
+              option: SelfUse
+            target:
+              entity_id: !input foxess_cloud_work_mode
+          - alias: Enable Force Discharge Schedule
+            action: foxess_cloud.set_schedule
+            data:
+              device_sn: !input foxess_cloud_inverter_serial
+              groups:
+                - enable: 0
+                  startHour: 23
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 5
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                # Force Discharge - only place this is set to enable: 1
+                - enable: 1
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharging"
+                      message: "Force Discharge Started"
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharging
+              message: "Force Discharge Started"
+  # End Start Discharge Actions
+
+  # Stop Discharge Actions
+  - alias: Stop Discharge Actions
+    choose:
+      - alias: STOP DISCHARGE - End of discharge window (car not charging)
+        conditions:
+          - condition: trigger
+            id:
+              - Time 23:29:00
+          - condition: template
+            value_template: "{{ force_discharge_enable }}"
+            alias: Force discharge is enabled
+          - condition: numeric_state
+            entity_id: !input zappi_ev_power
+            below: 1
+            alias: Car is not charging
+        sequence:
+          - alias: Disable Force Discharge Schedule
+            action: foxess_cloud.set_schedule
+            data:
+              device_sn: !input foxess_cloud_inverter_serial
+              groups:
+                - enable: 0
+                  startHour: 23
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 5
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharge Stopped"
+                      message: "Force Discharge window ended"
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharge Stopped
+              message: "Force Discharge window ended"
+
+      - alias: STOP DISCHARGE + START CHARGE - Car started charging during discharge, optimistic or off-peak on
+        conditions:
+          - condition: trigger
+            id:
+              - zappi_ev_charging_above_1
+          - condition: template
+            value_template: "{{ force_discharge_enable }}"
+            alias: Force discharge is enabled
+          - condition: template
+            alias: Within force discharge time window
+            value_template: >
+              {% set now_mins = now().hour * 60 + now().minute %}
+              {% set start_h = discharge_start_time.split(':')[0] | int %}
+              {% set start_m = discharge_start_time.split(':')[1] | int %}
+              {% set start_mins = start_h * 60 + start_m %}
+              {{ now_mins >= start_mins and now_mins < (23 * 60 + 29) }}
+          - condition: or
+            conditions:
+              - condition: template
+                value_template: "{{ optimistic_enabled }}"
+              - condition: state
+                entity_id: !input octopus_off_peak
+                state: "on"
+          - condition: template
+            value_template: "{{ automation_mode == 'charge' }}"
+            alias: Automation mode is charge
+        sequence:
+          - action: select.select_option
+            alias: Set Work Mode to Self Use
+            data:
+              option: SelfUse
+            target:
+              entity_id: !input foxess_cloud_work_mode
+          - alias: Disable Discharge, Enable Daytime Charge
+            action: foxess_cloud.set_schedule
+            data:
+              device_sn: !input foxess_cloud_inverter_serial
+              groups:
+                - enable: 0
+                  startHour: 23
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 1
+                  startHour: 5
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharge Stopped"
+                      message: "Car started charging during force discharge, discharge stopped and charging started"
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharge Stopped
+              message: "Car started charging during force discharge, discharge stopped and charging started"
+
+      - alias: STOP DISCHARGE + BACKUP - Car started charging during discharge, off-peak off
+        conditions:
+          - condition: trigger
+            id:
+              - zappi_ev_charging_above_1
+          - condition: template
+            value_template: "{{ force_discharge_enable }}"
+            alias: Force discharge is enabled
+          - condition: template
+            alias: Within force discharge time window
+            value_template: >
+              {% set now_mins = now().hour * 60 + now().minute %}
+              {% set start_h = discharge_start_time.split(':')[0] | int %}
+              {% set start_m = discharge_start_time.split(':')[1] | int %}
+              {% set start_mins = start_h * 60 + start_m %}
+              {{ now_mins >= start_mins and now_mins < (23 * 60 + 29) }}
+        sequence:
+          - alias: Disable All Schedules Including Discharge
+            action: foxess_cloud.set_schedule
+            data:
+              device_sn: !input foxess_cloud_inverter_serial
+              groups:
+                - enable: 0
+                  startHour: 23
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 59
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 0
+                  startMinute: 0
+                  endHour: 5
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: 5
+                  startMinute: 30
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceCharge
+                  minSocOnGrid: 20
+                  fdSoc: 100
+                  fdPwr: !input foxess_cloud_charge_rate
+                  maxSoc: 100
+                - enable: 0
+                  startHour: "{{ discharge_start_time.split(':')[0] | int }}"
+                  startMinute: "{{ discharge_start_time.split(':')[1] | int }}"
+                  endHour: 23
+                  endMinute: 29
+                  workMode: ForceDischarge
+                  minSocOnGrid: 20
+                  fdSoc: 20
+                  fdPwr: !input foxess_cloud_discharge_rate
+          - action: select.select_option
+            alias: Set Work Mode to Backup
+            data:
+              option: Backup
+            target:
+              entity_id: !input foxess_cloud_work_mode
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: "Battery Discharge Stopped"
+                      message: "Car started charging during force discharge, discharge stopped, battery protection active"
+          - event: !input notification_event
+            event_data:
+              title: Battery Discharge Stopped
+              message: "Car started charging during force discharge, discharge stopped, battery protection active"
+  # End Stop Discharge Actions
 
   # Error Charging Actions
   - alias: Battery Discharge Power Check (Notify)
