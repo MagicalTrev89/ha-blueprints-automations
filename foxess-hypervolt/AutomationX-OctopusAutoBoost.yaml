@@ -1,9 +1,10 @@
 blueprint:
   name: Automation 2 - Octopus Auto Boost
   author: TechGuides
-  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/automation3-octopusautoboost.yaml
+  source_url: https://github.com/MagicalTrev89/ha-blueprints-automations/blob/master/foxess-hypervolt/AutomationX-OctopusAutoBoost.yaml
   description: |
     ## Overview
+
     This automation assumes you have
     - Octopus Integration
     - Hypervolt Integration
@@ -12,222 +13,494 @@ blueprint:
     This automation manipulates the Octopus Intelligent Go target amount to maintain sufficient charge in the FoxESS battery.
 
     The Target amount is the amount of charge to add to the car set in the Octopus app. Setting the target amount to 100% provides the highest chance of getting a charging window.
+
     When the FoxESS battery is charged to a sufficient level, the target charge amount is lowered (default 10%), which usually results in the car stopping charging.
+
     By stopping the car from charging, we leave charging capacity so the automation can charge the battery up again when needed.
 
     This allows the house to run at an overall cheaper rate of electricity, helping prevent the house from running out of battery and pulling from the grid.
+
+    ## Battery ceiling
+
+    If you provide the FoxESS Max SOC entity, the boost sets it to the Boost Max SOC value (default 90%) when it starts, and back to Normal Max SOC (default 100%) when the car is unplugged or at the daily reset time. The inverter then enforces the ceiling in firmware, so the battery stops on its own without this automation having to watch the SOC.
+
+    This also patches a gap in Automation 1 / Octopus Intelligent Go - Hypervolt, which only sets Max SOC back to 100% in its overnight branch, and only when the inverter is not already in Force Charge. A daytime dispatch still running at 23:30 skips that branch and would otherwise leave the ceiling low all night.
+
+    ## Optional hooks for multi-car households
+
+    Four optional inputs let you adapt the automation to your own vehicles without forking the blueprint. Leave them all blank and the automation behaves as a single-car setup.
+
+    - **Pre-flight script** runs before the boost decides anything. Use it to refresh cloud-polled car data so the block check below reads current values.
+    - **Block entity and states** stand the boost down when a car must charge uninterrupted, for example when your second car is the one plugged in.
+    - **Stop car charging script** replaces the default stop action. Use it to set your car's charge limit low, or to reduce your charger's max current.
+    - **Restore car charging script** undoes the above when the car is unplugged.
+
+    The blueprint never calls the pre-flight script if the cached block value already blocks the boost, so cloud refreshes stay rare. Cooldowns, staleness handling and any daily call limits belong inside your own script.
+
   domain: automation
   homeassistant:
     min_version: 2025.8.3
+
   input:
-    foxess_modbus_soc:
-      name: FoxESS Inverter State of Charge (SOC)
-      selector:
-        entity:
-          filter:
-            domain: sensor
-            integration: foxess_modbus
-    hypervolt_ev_plugged:
-      name: Hypervolt Car Plugged
-      description: "This is the sensor that shows if the car is plugged in, for example: binary_sensor.hypervolt_car_plugged"
-      selector:
-        entity:
-          filter:
-            domain: binary_sensor
-            integration: hypervolt_charger
-    hypervolt_charging_switch:
-      name: Hypervolt Charging Switch
-      description: "The switch that shows/controls whether the car is actively charging, for example: switch.hypervolt_charging"
-      selector:
-        entity:
-          filter:
-            domain: switch
-            integration: hypervolt_charger
-    octopus_smart_charge_switch:
-      name: Octopus Intelligent Smart Charge Switch
-      description: "The switch that enables/disables Octopus Intelligent smart charging, for example: switch.octopus_energy_..._intelligent_smart_charge"
-      selector:
-        entity:
-          filter:
-            domain: switch
-            integration: octopus_energy
-    octopus_charge_target_number:
-      name: Octopus Intelligent Charge Target
-      description: "The number entity controlling the Octopus Intelligent charge target %, for example: number.octopus_energy_..._intelligent_charge_target"
-      selector:
-        entity:
-          filter:
-            domain: number
-            integration: octopus_energy
-    daily_ev_charging_time_sensor:
-      name: Daily EV Charging Time Sensor
-      description: "A sensor tracking how many hours the EV has charged today, used to avoid over-boosting."
-      selector:
-        entity:
-          filter:
-            domain: sensor
-    solar_power_sensor:
-      name: Solar Power Sensor
-      description: "Current solar production, used to detect low-solar periods, for example: sensor.pv_power_rhs"
-      selector:
-        entity:
-          filter:
-            domain: sensor
-    work_mode_select:
-      name: Inverter Work Mode Select
-      description: "The select entity for the FoxESS work mode, for example: select.rhs_work_mode"
-      selector:
-        entity:
-          filter:
-            domain: select
-    work_mode_self_use_state:
-      name: Self Use Work Mode State
-      description: "The exact option text that represents 'Self Use' mode on your inverter."
-      default: "Self Use"
-      selector:
-        text: {}
-    boost_below_soc:
-      name: Boost Trigger SOC (%)
-      description: "House battery SOC below which boosting may start."
-      default: 26
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: box
-    boost_below_soc_critical:
-      name: Critical Boost SOC (%)
-      description: "House battery SOC below which boosting starts even without low solar."
-      default: 21
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: box
-    solar_low_threshold:
-      name: Low Solar Threshold (kW)
-      default: 0.05
-      selector:
-        number:
-          min: 0
-          max: 10
-          step: 0.01
-          unit_of_measurement: "kW"
-          mode: box
-    max_daily_ev_charging_hours:
-      name: Max Daily EV Charging Hours
-      description: "Boosting won't start if the EV has already charged this many hours today."
-      default: 5.972
-      selector:
-        number:
-          min: 0
-          max: 24
-          step: 0.001
-          unit_of_measurement: "h"
-          mode: box
-    stop_above_soc:
-      name: Stop Boost SOC (%)
-      description: "House battery SOC above which boosting stops."
-      default: 79
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: box
-    charge_target_low:
-      name: Low Charge Target (%)
-      description: "Octopus charge target used when stopping the boost."
-      default: 10
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: box
-    charge_target_high:
-      name: High Charge Target (%)
-      description: "Octopus charge target used when starting the boost."
-      default: 100
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: box
+    core_entities:
+      name: Core entities
+      icon: mdi:home-lightning-bolt
+      collapsed: false
+      input:
+        foxess_modbus_soc:
+          name: FoxESS Inverter State of Charge (SOC)
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                integration: foxess_modbus
+
+        hypervolt_ev_plugged:
+          name: Hypervolt Car Plugged
+          description: "This is the sensor that shows if the car is plugged in, for example: binary_sensor.hypervolt_car_plugged"
+          selector:
+            entity:
+              filter:
+                domain: binary_sensor
+                integration: hypervolt_charger
+
+        octopus_smart_charge_switch:
+          name: Octopus Intelligent Smart Charge Switch
+          description: "The switch that enables/disables Octopus Intelligent smart charging, for example: switch.octopus_energy_..._intelligent_smart_charge"
+          selector:
+            entity:
+              filter:
+                domain: switch
+                integration: octopus_energy
+
+        octopus_charge_target_number:
+          name: Octopus Intelligent Charge Target
+          description: "The number entity controlling the Octopus Intelligent charge target %, for example: number.octopus_energy_..._intelligent_charge_target"
+          selector:
+            entity:
+              filter:
+                domain: number
+                integration: octopus_energy
+
+        daily_ev_charging_time_sensor:
+          name: Daily EV Charging Time Sensor
+          description: >-
+            A sensor tracking how many hours the EV has charged today, used to avoid over-boosting.
+            The Octopus integration's own intelligent charge cap hours sensor is the most authoritative
+            source, but note that it counts dispatch hours over a noon-to-noon period rather than
+            midnight-to-midnight, so it will not agree with a sensor that resets at midnight.
+          selector:
+            entity:
+              filter:
+                domain: sensor
+
+        solar_power_sensor:
+          name: Solar Power Sensor
+          description: "Current solar production, used to detect low-solar periods, for example: sensor.pv_power_rhs"
+          selector:
+            entity:
+              filter:
+                domain: sensor
+
+        work_mode_select:
+          name: Inverter Work Mode Select
+          description: >-
+            The select entity for the FoxESS work mode, for example: select.rhs_work_mode.
+            This automation only reads this entity, it never writes to it. Setting Force Charge
+            is left to Automation 1 / Octopus Intelligent Go - Hypervolt, which does it whenever
+            an off-peak period is active and the car is drawing power.
+          selector:
+            entity:
+              filter:
+                domain: select
+                integration: foxess_modbus
+
+    optional_entities:
+      name: Optional entities
+      icon: mdi:tune-variant
+      collapsed: true
+      input:
+        foxess_modbus_max_soc:
+          name: FoxESS Inverter Max SOC
+          description: >-
+            Optional. If provided, the boost caps the battery here instead of relying on this
+            automation to notice the SOC and stop. Leave blank to disable the ceiling.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: number
+                integration: foxess_modbus
+              multiple: true
+
+        hypervolt_charging_switch:
+          name: Hypervolt Charging Switch
+          description: >-
+            Optional. If provided, the stop action only runs when the charger is actually charging.
+            Cleanup on unplug and at the daily reset happens regardless of this entity.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: switch
+                integration: hypervolt_charger
+              multiple: true
+
+        octopus_intelligent_state:
+          name: Octopus Intelligent State Sensor
+          description: >-
+            Optional. If provided, the boost will not start unless this sensor is in one of the
+            states listed below. Prevents pointless boosts when Octopus cannot smart control,
+            for example when it reports SMART_CONTROL_NOT_AVAILABLE.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                integration: octopus_energy
+              multiple: true
+
+        octopus_intelligent_ok_states:
+          name: Acceptable Intelligent States
+          description: Comma-separated list of states in which boosting is allowed.
+          default: "SMART_CONTROL_CAPABLE,SMART_CONTROL_IN_PROGRESS"
+          selector:
+            text: {}
+
+    car_hooks:
+      name: Optional car hooks
+      icon: mdi:car-electric
+      collapsed: true
+      input:
+        preflight_script:
+          name: Pre-flight check script
+          description: >-
+            Optional. Runs before the boost decides anything, and the automation waits for it to
+            finish. Use it to refresh cloud-polled car data. Put any cooldown, staleness or
+            call-limit logic inside the script itself, not here. Not called if the block entity
+            below already reads a blocking state.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: script
+              multiple: true
+
+        boost_block_entity:
+          name: Block boost when this entity matches
+          description: >-
+            Optional. If this entity is in one of the states listed below, the boost stands down.
+            Use it to protect a car that must charge uninterrupted, for example a second car's
+            plug status sensor. You can also point it at an input_boolean that your pre-flight
+            script sets when it could not reach the car.
+          default: []
+          selector:
+            entity:
+              multiple: true
+
+        boost_block_states:
+          name: Blocking states
+          description: "Comma-separated list, for example: Plugged,Charging"
+          default: ""
+          selector:
+            text: {}
+
+        stop_charge_script:
+          name: Stop car charging script
+          description: >-
+            Optional. Called instead of lowering the Octopus charge target when the boost stops.
+            Use it to set your car's charge limit low, or to reduce your charger's max current.
+            Both leave the Octopus dispatch alive so any other car keeps its cheap rate.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: script
+              multiple: true
+
+        restore_charge_script:
+          name: Restore car charging script
+          description: Optional. Called when the car is unplugged, to undo the stop script.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: script
+              multiple: true
+
+    thresholds:
+      name: Thresholds and timings
+      icon: mdi:speedometer
+      collapsed: true
+      input:
+        boost_below_soc:
+          name: Boost Trigger SOC (%)
+          description: "House battery SOC below which boosting may start."
+          default: 26
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        boost_below_soc_critical:
+          name: Critical Boost SOC (%)
+          description: "House battery SOC below which boosting starts even without low solar."
+          default: 21
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        solar_low_threshold:
+          name: Low Solar Threshold (kW)
+          default: 0.05
+          selector:
+            number:
+              min: 0
+              max: 10
+              step: 0.01
+              unit_of_measurement: "kW"
+              mode: box
+
+        max_daily_ev_charging_hours:
+          name: Max Daily EV Charging Hours
+          description: "Boosting won't start if the EV has already charged this many hours today."
+          default: 5.972
+          selector:
+            number:
+              min: 0
+              max: 24
+              step: 0.001
+              unit_of_measurement: "h"
+              mode: box
+
+        stop_above_soc:
+          name: Stop Boost SOC (%)
+          description: "House battery SOC above which boosting stops."
+          default: 79
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        charge_target_low:
+          name: Low Charge Target (%)
+          description: >-
+            Octopus charge target used when stopping the boost, if no stop script is provided.
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        charge_target_high:
+          name: High Charge Target (%)
+          description: "Octopus charge target used when starting the boost."
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        boost_max_soc:
+          name: Boost Max SOC (%)
+          description: >-
+            Battery ceiling while boosting. Only used if the Max SOC entity is provided.
+          default: 90
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        normal_max_soc:
+          name: Normal Max SOC (%)
+          description: >-
+            Battery ceiling restored on unplug and at the daily reset time.
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+
+        core_window_start:
+          name: Core Off Peak Window Start
+          description: >-
+            The boost will not start inside this window. Electricity is already cheap here, so
+            manufacturing a dispatch spends daily charging allowance for nothing. A few minutes
+            of buffer either side avoids a boost starting moments before the window opens.
+          default: "23:25:00"
+          selector:
+            time: {}
+
+        core_window_end:
+          name: Core Off Peak Window End
+          default: "05:35:00"
+          selector:
+            time: {}
+
+        daily_reset_time:
+          name: Daily Reset Time
+          description: >-
+            Restores Max SOC and the Octopus charge target every day, so a boost that ended
+            untidily cannot leave the battery capped overnight.
+          default: "23:29:00"
+          selector:
+            time: {}
+
+    behaviour:
+      name: Behaviour and notifications
+      icon: mdi:cog
+      collapsed: true
+      input:
+        stop_disables_smart_charge:
+          name: Also disable Octopus smart charge when stopping?
+          description: >-
+            Legacy behaviour, off by default. Turning the Octopus smart charge switch off ends
+            Octopus control for the whole house, not just one car. Any charging that then happens
+            outside the core off-peak window is at the full rate, and a shared charger will stop
+            entirely if its activation mode is set to Octopus. Only enable this if you have a
+            single car and understand the cost risk.
+          default: false
+          selector:
+            boolean:
+
+        notification_device:
+          name: Notification Device
+          description: >-
+            The mobile_app device to send notifications to, i.e notify.mobile_app_my_iphone.
+            Unfortunately it is not possible to provide a workable dropdown, you must get the
+            name from your app. Use notify.notify to send to all devices.
+          default: notify.notify
+          selector:
+            text:
+
+        notification_event:
+          name: Notification Event
+          description: >-
+            This sends a notification event to home-assistant which can be used by other
+            automations i.e blueprint-notification
+          default: blueprint-notification
+          selector:
+            text:
+
+        notification_enabled:
+          name: Do you want to enable notifications?
+          description: Enable or disable sending notifications
+          default: false
+          selector:
+            boolean:
+
+variables:
+  notification_enabled: !input notification_enabled
+  stop_disables_smart_charge: !input stop_disables_smart_charge
+  charge_target_low: !input charge_target_low
+  charge_target_high: !input charge_target_high
+  boost_max_soc: !input boost_max_soc
+  normal_max_soc: !input normal_max_soc
+  max_soc_entity: !input foxess_modbus_max_soc
+  charging_switch: !input hypervolt_charging_switch
+  intelligent_state_entity: !input octopus_intelligent_state
+  intelligent_ok_raw: !input octopus_intelligent_ok_states
+  intelligent_ok_states: >-
+    {{ intelligent_ok_raw.split(',') | map('trim') | reject('eq', '') | list }}
+  preflight: !input preflight_script
+  block_entity: !input boost_block_entity
+  block_states_raw: !input boost_block_states
+  block_states: >-
+    {{ block_states_raw.split(',') | map('trim') | reject('eq', '') | list }}
+  stop_script: !input stop_charge_script
+  restore_script: !input restore_charge_script
 
 triggers:
   - trigger: numeric_state
-    id: ev_power
+    id: soc_low
     entity_id: !input foxess_modbus_soc
     below: !input boost_below_soc
-    enabled: true
+
   - trigger: numeric_state
-    id: ev_power_critical
+    id: soc_critical
     entity_id: !input foxess_modbus_soc
     below: !input boost_below_soc_critical
-    enabled: true
+
   - trigger: state
     id: ev_plugged
     entity_id: !input hypervolt_ev_plugged
     from: "off"
     to: "on"
-    enabled: true
+
   - trigger: numeric_state
     id: solar_low
     entity_id: !input solar_power_sensor
     below: !input solar_low_threshold
     for:
       minutes: 3
-    enabled: true
-  - trigger: event
-    id: reloaded
-    event_type: automation_reloaded
-    enabled: false
+
   - trigger: numeric_state
-    id: ev_power_high
+    id: soc_reached
     entity_id: !input foxess_modbus_soc
     above: !input stop_above_soc
-    enabled: true
+
   - trigger: state
     id: ev_unplugged
     entity_id: !input hypervolt_ev_plugged
     to: "off"
-    enabled: true
+
+  - trigger: time
+    id: daily_reset
+    at: !input daily_reset_time
 
 conditions: []
 
 actions:
   - choose:
       # ---- Start / raise boost ----
-      - conditions:
+      - alias: START BOOST - battery low, no solar, car plugged in
+        conditions:
           - condition: trigger
             id:
-              - ev_power
-              - ev_power_critical
+              - soc_low
+              - soc_critical
               - ev_plugged
               - solar_low
-              - reloaded
-          - condition: state
-            entity_id: !input octopus_smart_charge_switch
-            state: "off"
-          - condition: numeric_state
-            entity_id: !input daily_ev_charging_time_sensor
-            below: !input max_daily_ev_charging_hours
+
+          - alias: Not inside the core off-peak window
+            condition: not
+            conditions:
+              - condition: time
+                after: !input core_window_start
+                before: !input core_window_end
+
           - condition: state
             entity_id: !input hypervolt_ev_plugged
             state: "on"
+
           - condition: numeric_state
             entity_id: !input foxess_modbus_soc
             below: !input boost_below_soc
-          - condition: or
+
+          - alias: Either solar is low, or the battery is critically low
+            condition: or
             conditions:
               - condition: numeric_state
                 entity_id: !input solar_power_sensor
@@ -235,47 +508,217 @@ actions:
               - condition: numeric_state
                 entity_id: !input foxess_modbus_soc
                 below: !input boost_below_soc_critical
-          - condition: state
+
+          - alias: Daily charging allowance not yet spent
+            condition: numeric_state
+            entity_id: !input daily_ev_charging_time_sensor
+            below: !input max_daily_ev_charging_hours
+
+          - alias: Inverter is not already force charging
+            condition: state
             entity_id: !input work_mode_select
-            state: !input work_mode_self_use_state
+            state:
+              - Self Use
+              - Feed-in First
+              - Force Discharge
+              - Back-up
+
+          - alias: Octopus is able to smart control
+            condition: template
+            value_template: >-
+              {{ intelligent_state_entity | count == 0
+                 or states(intelligent_state_entity[0]) in intelligent_ok_states }}
+
         sequence:
-          - action: switch.turn_on
-            metadata: {}
+          - alias: Stand down without refreshing if the cached value already blocks
+            if:
+              - condition: template
+                value_template: >-
+                  {{ block_entity | count > 0
+                     and states(block_entity[0]) in block_states }}
+            then:
+              - stop: "Boost blocked by protected car (cached value, no refresh needed)"
+
+          - alias: Optional pre-flight refresh of car data
+            if:
+              - condition: template
+                value_template: "{{ preflight | count > 0 }}"
+            then:
+              - action: script.turn_on
+                target:
+                  entity_id: "{{ preflight[0] }}"
+              - alias: Wait for the pre-flight script to finish
+                wait_template: "{{ is_state(preflight[0], 'off') }}"
+                timeout: "00:02:00"
+                continue_on_timeout: true
+
+          - alias: Re-check the block entity now the data is fresh
+            condition: template
+            value_template: >-
+              {{ block_entity | count == 0
+                 or states(block_entity[0]) not in block_states }}
+
+          - alias: Cap the battery at the boost ceiling
+            if:
+              - condition: template
+                value_template: "{{ max_soc_entity | count > 0 }}"
+            then:
+              - action: number.set_value
+                target:
+                  entity_id: "{{ max_soc_entity[0] }}"
+                data:
+                  value: "{{ boost_max_soc }}"
+
+          - alias: Make sure Octopus smart charge is on
+            action: switch.turn_on
             target:
               entity_id: !input octopus_smart_charge_switch
-            data: {}
-          - if:
+
+          - alias: Raise the Octopus charge target to provoke a dispatch
+            if:
               - condition: numeric_state
                 entity_id: !input octopus_charge_target_number
                 below: !input charge_target_high
             then:
               - action: number.set_value
-                metadata: {}
                 target:
                   entity_id: !input octopus_charge_target_number
                 data:
                   value: "{{ charge_target_high }}"
 
-      # ---- Stop / lower boost ----
-      - conditions:
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Octopus Auto Boost
+                      message: "Boost started, charge target raised"
+                  - event: !input notification_event
+                    event_data:
+                      title: Octopus Auto Boost
+                      message: "Boost started, charge target raised"
+
+      # ---- Stop boost ----
+      - alias: STOP BOOST - battery charged enough
+        conditions:
           - condition: trigger
-            id:
-              - ev_power_high
-              - ev_unplugged
-          - condition: state
-            entity_id: !input hypervolt_charging_switch
-            state: "on"
-          - condition: state
-            entity_id: !input octopus_smart_charge_switch
-            state: "on"
+            id: soc_reached
+
           - condition: numeric_state
             entity_id: !input foxess_modbus_soc
             above: !input stop_above_soc
-        sequence:
-          - action: switch.turn_off
-            metadata: {}
-            target:
-              entity_id: !input octopus_smart_charge_switch
-            data: {}
 
-mode: single
+          - alias: Charger is actually charging, if that entity was provided
+            condition: template
+            value_template: >-
+              {{ charging_switch | count == 0
+                 or is_state(charging_switch[0], 'on') }}
+
+        sequence:
+          - alias: Stop the car charging, without ending Octopus control
+            if:
+              - condition: template
+                value_template: "{{ stop_script | count > 0 }}"
+            then:
+              - action: script.turn_on
+                target:
+                  entity_id: "{{ stop_script[0] }}"
+            else:
+              - action: number.set_value
+                target:
+                  entity_id: !input octopus_charge_target_number
+                data:
+                  value: "{{ charge_target_low }}"
+
+          - alias: Legacy behaviour, only if explicitly enabled
+            if:
+              - condition: template
+                value_template: "{{ stop_disables_smart_charge }}"
+            then:
+              - action: switch.turn_off
+                target:
+                  entity_id: !input octopus_smart_charge_switch
+
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Octopus Auto Boost
+                      message: "Boost stopped, battery reached target"
+                  - event: !input notification_event
+                    event_data:
+                      title: Octopus Auto Boost
+                      message: "Boost stopped, battery reached target"
+
+      # ---- Reset ----
+      - alias: RESET - car unplugged or daily reset
+        conditions:
+          - condition: trigger
+            id:
+              - ev_unplugged
+              - daily_reset
+
+        sequence:
+          - alias: Restore the battery ceiling
+            if:
+              - condition: template
+                value_template: "{{ max_soc_entity | count > 0 }}"
+            then:
+              - action: number.set_value
+                target:
+                  entity_id: "{{ max_soc_entity[0] }}"
+                data:
+                  value: "{{ normal_max_soc }}"
+
+          - alias: Restore the Octopus charge target
+            if:
+              - condition: numeric_state
+                entity_id: !input octopus_charge_target_number
+                below: !input charge_target_high
+            then:
+              - action: number.set_value
+                target:
+                  entity_id: !input octopus_charge_target_number
+                data:
+                  value: "{{ charge_target_high }}"
+
+          - alias: Undo the stop script, if one was provided
+            if:
+              - condition: template
+                value_template: "{{ restore_script | count > 0 }}"
+            then:
+              - action: script.turn_on
+                target:
+                  entity_id: "{{ restore_script[0] }}"
+
+          - alias: Notification
+            choose:
+              - alias: Notify if enabled
+                conditions:
+                  - condition: template
+                    alias: Are Notifications Enabled?
+                    value_template: "{{ notification_enabled }}"
+                sequence:
+                  - service: !input notification_device
+                    data:
+                      title: Octopus Auto Boost
+                      message: "Reset, charger and battery ceiling back to defaults"
+                  - event: !input notification_event
+                    event_data:
+                      title: Octopus Auto Boost
+                      message: "Reset, charger and battery ceiling back to defaults"
+
+mode: queued
+max: 3
+max_exceeded: silent
